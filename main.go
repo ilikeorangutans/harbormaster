@@ -9,8 +9,8 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/ilikeorangutans/azkabanlib"
-	"github.com/ilikeorangutans/azkabanlib/cli/cmd/check"
+	"github.com/ilikeorangutans/harbormaster/azkaban"
+	"github.com/ilikeorangutans/harbormaster/cli/cmd/check"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	app = kingpin.New("harbourmaster", "a thingy that makes working with the boats easier")
+	app = kingpin.New("harbormaster", "a thingy that makes working with the boats easier")
 
 	login         = app.Command("login", "authenticate against azkaban and sets session id as environment variable")
 	loginHost     = login.Arg("host", "username").Required().URL()
@@ -68,7 +68,7 @@ func main() {
 
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case login.FullCommand():
-		client, err := azkabanlib.ConnectWithUsernameAndPassword((*loginHost).String(), *loginUsername, *loginPassword)
+		client, err := azkaban.ConnectWithUsernameAndPassword((*loginHost).String(), *loginUsername, *loginPassword)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -125,9 +125,9 @@ func main() {
 	}
 }
 
-var client *azkabanlib.Client
+var client *azkaban.Client
 
-func getClient() *azkabanlib.Client {
+func getClient() *azkaban.Client {
 	if client != nil {
 		return client
 	}
@@ -135,7 +135,7 @@ func getClient() *azkabanlib.Client {
 	sessionID := os.Getenv(AzkabanSessionIDEnv)
 	host := os.Getenv(AzkabanHostEnv)
 	var err error
-	client, err = azkabanlib.ConnectWithSessionID(host, sessionID)
+	client, err = azkaban.ConnectWithSessionID(host, sessionID)
 	if err != nil {
 		panic(err)
 	}

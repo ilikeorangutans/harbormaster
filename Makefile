@@ -1,0 +1,4 @@
+
+harbormaster:
+	go build ./
+

@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/fatih/color"
-	"github.com/ilikeorangutans/azkabanlib"
+	"github.com/ilikeorangutans/harbormaster/azkaban"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -13,9 +13,9 @@ var cmd *kingpin.CmdClause
 var checkFlowCmd *kingpin.CmdClause
 var project *string
 var flow *string
-var getClient func() *azkabanlib.Client
+var getClient func() *azkaban.Client
 
-func ConfigureCommand(app *kingpin.Application, getClientFunc func() *azkabanlib.Client) {
+func ConfigureCommand(app *kingpin.Application, getClientFunc func() *azkaban.Client) {
 	getClient = getClientFunc
 	cmd = app.Command("check", "")
 	checkFlowCmd = cmd.Command("flow", "checks a flow").Action(checkFlow)

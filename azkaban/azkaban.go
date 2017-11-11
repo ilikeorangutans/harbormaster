@@ -1,4 +1,4 @@
-package azkabanlib
+package azkaban
 
 import (
 	"encoding/json"
