@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -92,10 +93,10 @@ func (c *Client) ProjectFlows(project string) ([]Flow, error) {
 	return flows.Flows, err
 }
 
-func (c *Client) ExecutionJobLog(executionID string, jobID string) (string, error) {
+func (c *Client) ExecutionJobLog(executionID int, jobID string) (string, error) {
 	params := make(map[string]string)
 	params["ajax"] = "fetchExecJobLogs"
-	params["execid"] = executionID
+	params["execid"] = strconv.Itoa(executionID)
 	params["jobId"] = jobID
 	params["offset"] = "0"
 	params["length"] = "10485760"

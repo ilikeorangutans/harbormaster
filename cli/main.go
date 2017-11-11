@@ -38,9 +38,9 @@ var (
 	executionsProject = executions.Arg("project", "").Required().HintAction(suggestProjects).String()
 	executionsFlow    = executions.Arg("flow", "").Required().HintAction(suggestFlow).String()
 
-	logs        = app.Command("logs", "")
-	logsProject = logs.Arg("project", "").Required().HintAction(suggestProjects).String()
-	logsExecID  = logs.Arg("execID", "").Required().HintAction(suggestExecID).Int()
+	logs       = app.Command("logs", "")
+	logsJobID  = logs.Arg("jobID", "").Required().HintAction(suggestProjects).String()
+	logsExecID = logs.Arg("execID", "").Required().HintAction(suggestExecID).Int()
 )
 
 func suggestFlow() []string {
@@ -107,6 +107,17 @@ func main() {
 			fmt.Fprintf(w, "%d \t %s \t %s \t %s\n", e.ExecutionID, e.Status, start.Format(time.RFC1123), humanize.Time(start))
 		}
 		w.Flush()
+
+	case logs.FullCommand():
+		client := getClient()
+
+		log, err := client.ExecutionJobLog(*logsExecID, *logsJobID)
+		if err != nil {
+			panic(err)
+		}
+
+		os.Stdout.WriteString(log)
+
 	}
 }
 
