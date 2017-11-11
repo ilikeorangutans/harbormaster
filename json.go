@@ -16,6 +16,7 @@ type Flow struct {
 }
 
 type ExecutionsList struct {
+	Total      int         `json:"total"`
 	Executions []Execution `json:"executions"`
 }
 
@@ -24,6 +25,18 @@ type Execution struct {
 	Status      string `json:"status"`
 	ExecutionID int64  `json:"execId"`
 	EndTime     int64  `json:"endTime"`
+}
+
+func (e Execution) IsFailure() bool {
+	return e.Status == "FAILED"
+}
+
+func (e Execution) IsSuccess() bool {
+	return e.Status == "SUCCEEDED"
+}
+
+func (e Execution) IsRunning() bool {
+	return e.Status == "RUNNING"
 }
 
 type FlowJobList struct {

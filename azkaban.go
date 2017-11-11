@@ -134,10 +134,11 @@ func (c *Client) FlowExecutions(project, flow string) ([]Execution, error) {
 	}
 
 	defer resp.Body.Close()
+
 	decoder := json.NewDecoder(resp.Body)
 
 	executions := ExecutionsList{}
-	decoder.Decode(&executions)
+	err = decoder.Decode(&executions)
 
 	return executions.Executions, err
 }
@@ -178,6 +179,6 @@ func (c *Client) request(method string, path string, params map[string]string) (
 	}
 	req.URL.RawQuery = q.Encode()
 
-	log.Printf("Requesting %s", req.URL.String())
+	//log.Printf("Requesting %s", req.URL.String())
 	return c.http.Do(req)
 }

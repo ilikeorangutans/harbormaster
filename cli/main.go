@@ -10,6 +10,7 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/ilikeorangutans/azkabanlib"
+	"github.com/ilikeorangutans/azkabanlib/cli/cmd/check"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -36,7 +37,7 @@ var (
 
 	executions        = app.Command("executions", "")
 	executionsProject = executions.Arg("project", "").Required().HintAction(suggestProjects).String()
-	executionsFlow    = executions.Arg("flow", "").Required().HintAction(suggestFlow).String()
+	executionsFlow    = executions.Arg("flow", "").Required().String()
 
 	logs       = app.Command("logs", "")
 	logsJobID  = logs.Arg("jobID", "").Required().HintAction(suggestProjects).String()
@@ -62,6 +63,9 @@ func suggestExecID() []string {
 }
 
 func main() {
+
+	check.ConfigureCommand(app, getClient)
+
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case login.FullCommand():
 		client, err := azkabanlib.ConnectWithUsernameAndPassword((*loginHost).String(), *loginUsername, *loginPassword)
