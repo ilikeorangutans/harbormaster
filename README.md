@@ -42,3 +42,9 @@ Last success:    1 hour ago
 Histogram:       .XX.................
 ```
 
+
+# Ideas & TODO
+
+- [ ] don't capture session expiration gracefully
+- [ ] download and cache project structure
+- [ ] add tab completion for projects, flows, and executions
