@@ -17,7 +17,6 @@ func (t *AzkabanTimestamp) UnmarshalJSON(b []byte) error {
 
 	return nil
 }
-
 func (t AzkabanTimestamp) Time() time.Time {
 	return time.Time(t)
 }
@@ -27,7 +26,20 @@ type LoginResponse struct {
 	SessionID string `json:"session.id"`
 }
 
+type AzkabanError interface {
+	AzkabanError() string
+}
+
+type AzkabanResponse struct {
+	Error string `json:"error"`
+}
+
+func (r AzkabanResponse) AzkabanError() string {
+	return r.Error
+}
+
 type ListFlowsResponse struct {
+	AzkabanResponse
 	Project   string `json:"project"`
 	ProjectID int    `json:"projectId"`
 	Flows     []Flow `json:"flows"`
@@ -37,6 +49,7 @@ type Flow struct {
 }
 
 type ExecutionsList struct {
+	AzkabanResponse
 	Total      int         `json:"total"`
 	Executions []Execution `json:"executions"`
 }
@@ -69,6 +82,7 @@ func (e Execution) Duration() time.Duration {
 }
 
 type FlowJobList struct {
+	AzkabanResponse
 	Nodes []FlowJob `json:"nodes"`
 }
 

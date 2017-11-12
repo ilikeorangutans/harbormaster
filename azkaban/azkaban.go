@@ -3,12 +3,13 @@ package azkaban
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var ErrInvalidSessionID = fmt.Errorf("invalid session id, session might have expired")
 
 func ConnectWithSessionID(url string, sessionID string) (*Client, error) {
 	client := &http.Client{
@@ -43,7 +44,6 @@ func ConnectWithUsernameAndPassword(url string, username string, password string
 	q.Add("password", password)
 	req.URL.RawQuery = q.Encode()
 
-	log.Printf("Authenticating against %s...", req.URL.String())
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -79,18 +79,12 @@ func (c *Client) ProjectFlows(project string) ([]Flow, error) {
 	params["ajax"] = "fetchprojectflows"
 	params["project"] = project
 
-	resp, err := c.request("GET", "manager", params)
-	if err != nil {
+	flows := ListFlowsResponse{}
+	if err := c.requestAndDecode("GET", "manager", params, &flows); err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-	decoder := json.NewDecoder(resp.Body)
-
-	flows := ListFlowsResponse{}
-
-	err = decoder.Decode(&flows)
-	return flows.Flows, err
+	return flows.Flows, nil
 }
 
 func (c *Client) ExecutionJobLog(executionID int, jobID string) (string, error) {
@@ -101,19 +95,8 @@ func (c *Client) ExecutionJobLog(executionID int, jobID string) (string, error) 
 	params["offset"] = "0"
 	params["length"] = "10485760"
 
-	resp, err := c.request("GET", "executor", params)
-	if err != nil {
-		return "", err
-	}
-
-	defer resp.Body.Close()
-
 	log := FlowJobLog{}
-
-	decoder := json.NewDecoder(resp.Body)
-
-	err = decoder.Decode(&log)
-	if err != nil {
+	if err := c.requestAndDecode("GET", "executor", params, &log); err != nil {
 		return "", err
 	}
 
@@ -128,19 +111,12 @@ func (c *Client) FlowExecutions(project, flow string) ([]Execution, error) {
 	params["start"] = "0"
 	params["length"] = "20"
 
-	resp, err := c.request("GET", "manager", params)
-	if err != nil {
+	executions := ExecutionsList{}
+	if err := c.requestAndDecode("GET", "manager", params, &executions); err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-
-	decoder := json.NewDecoder(resp.Body)
-
-	executions := ExecutionsList{}
-	err = decoder.Decode(&executions)
-
-	return executions.Executions, err
+	return executions.Executions, nil
 }
 
 func (c *Client) FlowJobs(project, flow string) ([]FlowJob, error) {
@@ -149,21 +125,36 @@ func (c *Client) FlowJobs(project, flow string) ([]FlowJob, error) {
 	params["project"] = project
 	params["flow"] = flow
 
-	resp, err := c.request("GET", "manager", params)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	decoder := json.NewDecoder(resp.Body)
-
 	jobList := FlowJobList{}
-	err = decoder.Decode(&jobList)
-	if err != nil {
+	if err := c.requestAndDecode("GET", "manager", params, &jobList); err != nil {
 		return nil, err
 	}
 
 	return jobList.Nodes, nil
+}
+
+func (c *Client) requestAndDecode(method string, path string, params map[string]string, dst interface{}) error {
+	resp, err := c.request(method, path, params)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(dst)
+	if err != nil {
+		return err
+	}
+
+	azkabanResp, ok := dst.(AzkabanError)
+	if !ok {
+		return fmt.Errorf("Bug: not an azakaban response")
+	}
+	if azkabanResp.AzkabanError() == "session" {
+		return ErrInvalidSessionID
+	}
+
+	return nil
+
 }
 
 func (c *Client) request(method string, path string, params map[string]string) (*http.Response, error) {
