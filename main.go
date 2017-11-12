@@ -107,8 +107,15 @@ func main() {
 		w := new(tabwriter.Writer)
 		w.Init(os.Stdout, 8, 4, 1, '\t', 0)
 		for _, e := range executions {
-			start := time.Unix(0, e.StartTime*1000000)
-			fmt.Fprintf(w, "%d \t %s \t %s \t %s\n", e.ExecutionID, e.Status, start.Format(time.RFC1123), humanize.Time(start))
+			fmt.Fprintf(
+				w,
+				"%d \t %s \t %s \t%s \t %s\n",
+				e.ExecutionID,
+				e.Status.Colored(),
+				e.StartTime.Time().Format(time.RFC1123),
+				e.Duration(),
+				humanize.Time(e.StartTime.Time()),
+			)
 		}
 		w.Flush()
 
