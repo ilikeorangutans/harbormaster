@@ -74,7 +74,7 @@ type Client struct {
 	url       string
 }
 
-func (c *Client) ProjectFlows(project string) ([]Flow, error) {
+func (c *Client) ListFlows(project string) ([]Flow, error) {
 	params := make(map[string]string)
 	params["ajax"] = "fetchprojectflows"
 	params["project"] = project

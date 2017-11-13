@@ -45,6 +45,7 @@ Histogram:       .XX.................
 
 # Ideas & TODO
 
+- [ ] on check view show if job is currently running, and how long
 - [ ] don't capture session expiration gracefully
 - [ ] download and cache project structure
 - [ ] add tab completion for projects, flows, and executions

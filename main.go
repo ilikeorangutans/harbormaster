@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -44,27 +43,14 @@ var (
 	logsExecID = logs.Arg("execID", "").Required().HintAction(suggestExecID).Int()
 )
 
-func suggestFlow() []string {
-	client := getClient()
-	flows, err := client.ProjectFlows(*executionsProject)
-	if err != nil {
-		log.Printf("Error retrieving list of flows: %s", err.Error())
-		return nil
-	}
-	result := []string{}
-	for _, f := range flows {
-		result = append(result, f.FlowID)
-	}
-	return result
-}
-
 func suggestExecID() []string {
 	return []string{"1", "2", "3"}
 }
 
 func main() {
 
-	check.ConfigureCommand(app, getClient)
+	context := azkaban.NewContext(getClient())
+	check.ConfigureCommand(app, context)
 
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case login.FullCommand():
@@ -81,7 +67,7 @@ func main() {
 	case flowsList.FullCommand():
 		client := getClient()
 
-		flows, err := client.ProjectFlows(*flowsProject)
+		flows, err := client.ListFlows(*flowsProject)
 		if err != nil {
 			panic(err)
 		}
@@ -148,9 +134,4 @@ func getClient() *azkaban.Client {
 	}
 
 	return client
-}
-
-func suggestProjects() []string {
-	// TODO: there's no way of retrieving a list of projects from azkaban.
-	return []string{"Longboat", "LongboatStaging"}
 }

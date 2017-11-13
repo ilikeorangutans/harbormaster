@@ -18,18 +18,39 @@ var flow *string
 var getClient func() *azkaban.Client
 var checkCountFlag *int
 
-func ConfigureCommand(app *kingpin.Application, getClientFunc func() *azkaban.Client) {
-	getClient = getClientFunc
+func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
+	s := &checkCmd{
+		ctx: ctx,
+	}
 	cmd = app.Command("check", "")
-	checkFlowCmd = cmd.Command("flow", "checks a flow").Action(checkFlow)
+	checkFlowCmd = cmd.Command("flow", "checks a flow").Action(s.checkFlow)
 	project = checkFlowCmd.Arg("project", "Project").Required().String()
-	flow = checkFlowCmd.Arg("flow", "Flow").Required().String()
+	flow = checkFlowCmd.Arg("flow", "Flow").HintAction(s.suggestFlow).Required().String()
 	checkCountFlag = checkFlowCmd.Flag("n", "number of executions to check").Default("20").Int()
 }
 
-func checkFlow(ctx *kingpin.ParseContext) error {
+type checkCmd struct {
+	ctx *azkaban.Context
+}
+
+func (s *checkCmd) suggestFlow() []string {
+	log.Printf("checkCmd.suggestFlow %s %s...\n", *project, *flow)
+	flows, err := s.ctx.Flows().ListFlows(azkaban.Project{Name: *project})
+	if err != nil {
+		fmt.Printf("error retrieving flows: %s\n", err.Error())
+		return []string{}
+	}
+	var result []string
+	log.Printf("Found %d\n", len(flows))
+	for _, f := range flows {
+		result = append(result, f.FlowID)
+	}
+	return result
+}
+
+func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	fmt.Printf("Checking status of %s::%s...\n", *project, *flow)
-	client := getClient()
+	client := s.ctx.Client()
 
 	executions, err := client.FlowExecutions(*project, *flow)
 	if err != nil {
