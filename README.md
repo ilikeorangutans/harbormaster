@@ -45,6 +45,7 @@ Histogram:       .XX.................
 
 # Ideas & TODO
 
+- [ ] add report feature to summarize execution times for a project's flows
 - [ ] on check view show if job is currently running, and how long
 - [ ] don't capture session expiration gracefully
 - [ ] download and cache project structure

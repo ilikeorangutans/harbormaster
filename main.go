@@ -10,6 +10,7 @@ import (
 	humanize "github.com/dustin/go-humanize"
 	"github.com/ilikeorangutans/harbormaster/azkaban"
 	"github.com/ilikeorangutans/harbormaster/cli/cmd/check"
+	"github.com/ilikeorangutans/harbormaster/cli/cmd/report"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -51,6 +52,7 @@ func main() {
 
 	context := azkaban.NewContext(getClient())
 	check.ConfigureCommand(app, context)
+	report.ConfigureCommand(app, context)
 
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case login.FullCommand():

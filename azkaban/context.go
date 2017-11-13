@@ -21,3 +21,7 @@ func (c Context) Projects() ProjectRepository {
 func (c Context) Flows() FlowRepository {
 	return NewFlowRepository(c.client)
 }
+
+func (c Context) Executions() ExecutionRepository {
+	return NewExecutionRepository(c.client)
+}
