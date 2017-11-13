@@ -2,7 +2,6 @@ package report
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -19,7 +18,6 @@ func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
 	cmd := &execReportCmd{
 		ctx: ctx,
 	}
-	log.Println(cmd)
 
 	reportCmd := app.Command("report", "")
 	execReport := reportCmd.Command("exec-time", "").Action(cmd.execReport)
@@ -48,8 +46,6 @@ func (e *execReportCmd) execReport(ctx *kingpin.ParseContext) error {
 	} else {
 		filteredFlows = flows
 	}
-
-	fmt.Printf("Fetching %d flows...\n", len(filteredFlows))
 
 	data := []execReportData{}
 	execRepo := e.ctx.Executions()
@@ -83,10 +79,26 @@ func (e *execReportCmd) execReport(ctx *kingpin.ParseContext) error {
 
 	fmt.Printf("FlowID \tSuccess Count \t Average Time\n")
 	for _, d := range data {
-		fmt.Printf("%s \t %4d \t%s\n", d.FlowID, d.SuccessCount, d.AverageTime)
+		fmt.Printf("%s \t %4d \t%s\n", d.FlowID, d.SuccessCount, formatDuration(d.AverageTime))
 	}
 
 	return nil
+}
+
+func formatDuration(d time.Duration) string {
+	hours := 0
+	if d.Hours() >= 1.0 {
+		hours = int(d.Hours())
+	}
+	minutes := 0
+	if d.Minutes() > 0 {
+		minutes = int(d.Minutes()) % 60
+	}
+	seconds := 0
+	if d.Seconds() > 0 {
+		seconds = int(d.Seconds()) % 60
+	}
+	return fmt.Sprintf("%d:%d:%d", hours, minutes, seconds)
 }
 
 type execReportData struct {
