@@ -20,9 +20,9 @@ func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
 	}
 
 	reportCmd := app.Command("report", "")
-	execReport := reportCmd.Command("exec-time", "").Action(cmd.execReport)
+	execReport := reportCmd.Command("exec-time", "average execution time as tab-delimited list").Action(cmd.execReport)
 	project = execReport.Arg("project", "").Required().String()
-	flowFilter = execReport.Arg("flow-prefix", "").String()
+	flowFilter = execReport.Arg("flow-prefix", "prefix filter").String()
 }
 
 type execReportCmd struct {

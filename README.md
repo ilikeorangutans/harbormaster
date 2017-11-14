@@ -42,6 +42,10 @@ Last success:    1 hour ago
 Histogram:       .XX.................
 ```
 
+# References
+
+http://azkaban.github.io/azkaban/docs/latest/#ajax-api
+
 
 # Ideas & TODO
 
