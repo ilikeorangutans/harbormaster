@@ -71,6 +71,7 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 
 	health := executions.Health()
 	histogram := executions.Histogram()
+	details := executions.HistogramDetails(5)
 
 	fmt.Printf("%-16s %s\n", "Job health:", health.Colored())
 	fmt.Printf("%-16s %d failures, %d successes, %d running, %d total\n", "Stats:", histogram.Failures, histogram.Successes, histogram.Running, histogram.Total)
@@ -86,6 +87,9 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	}
 	fmt.Printf("%-16s %s\n", "Next execution:", scheduledMessage)
 	fmt.Printf("Histogram:       %s\n", histogram.Histogram)
+	for _, l := range details {
+		fmt.Printf("%-16s %s\n", " ", l)
+	}
 
 	return nil
 }

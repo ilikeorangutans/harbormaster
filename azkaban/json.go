@@ -1,9 +1,13 @@
 package azkaban
 
 import (
+	"bytes"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 )
 
@@ -118,7 +122,32 @@ func (e Executions) Histogram() ExecutionHistogram {
 	result.Total = len(e)
 
 	return result
+}
 
+func (e Executions) HistogramDetails(n int) []string {
+	lines := []string{}
+
+	for i := n - 1; i >= 0; i-- {
+		var buffer bytes.Buffer
+		buffer.WriteString(strings.Repeat("|", i))
+		buffer.WriteString("`")
+		buffer.WriteString(strings.Repeat("-", n-i))
+		buffer.WriteString(" ")
+
+		execution := e[i]
+		buffer.WriteString(
+			fmt.Sprintf(
+				"%-16s %-16s %s",
+				execution.Status.Colored(),
+				humanize.Time(execution.StartTime.Time()),
+				formatDuration(execution.Duration()),
+			),
+		)
+
+		lines = append(lines, buffer.String())
+	}
+
+	return lines
 }
 
 type Execution struct {
@@ -160,6 +189,8 @@ type FlowJob struct {
 	ID   string   `json:"id"`
 	Type string   `json:"type"`
 	In   []string `json:"in"`
+	Next *FlowJob
+	Prev *FlowJob
 }
 
 type FlowJobLog struct {
@@ -207,4 +238,20 @@ func (t *AzkabanStringTime) UnmarshalJSON(b []byte) error {
 
 func (t AzkabanStringTime) Time() time.Time {
 	return time.Time(t)
+}
+
+func formatDuration(d time.Duration) string {
+	hours := 0
+	if d.Hours() >= 1.0 {
+		hours = int(d.Hours())
+	}
+	minutes := 0
+	if d.Minutes() > 0 {
+		minutes = int(d.Minutes()) % 60
+	}
+	seconds := 0
+	if d.Seconds() > 0 {
+		seconds = int(d.Seconds()) % 60
+	}
+	return fmt.Sprintf("%d:%d:%d", hours, minutes, seconds)
 }
