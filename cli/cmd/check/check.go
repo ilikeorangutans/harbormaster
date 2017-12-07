@@ -3,10 +3,8 @@ package check
 import (
 	"fmt"
 	"log"
-	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/fatih/color"
 	"github.com/ilikeorangutans/harbormaster/azkaban"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
@@ -51,8 +49,17 @@ func (s *checkCmd) suggestFlow() []string {
 func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	fmt.Printf("Checking status of %s::%s...\n", *project, *flow)
 	client := s.ctx.Client()
+	flowRepo := azkaban.NewFlowRepository(s.ctx.Client())
+	flow, proj, err := flowRepo.Flow(azkaban.Project{Name: *project}, *flow)
+	if err != nil {
+		return err
+	}
 
-	executions, err := client.FlowExecutions(*project, *flow)
+	schedule, err := client.FlowSchedule(proj.ID, flow.FlowID)
+	if err != nil {
+		return err
+	}
+	executions, err := client.FlowExecutions(proj.Name, flow.FlowID)
 	if err != nil {
 		return err
 	}
@@ -62,81 +69,23 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 		return nil
 	}
 
-	health := Healthy
-	failures := 0
-	successes := 0
-	running := 0
-	histogram := ""
-	var lastSuccess *time.Time
-
-	for _, e := range executions {
-		if e.IsFailure() {
-			failures++
-			histogram += color.RedString("X")
-		} else if e.IsSuccess() {
-			if lastSuccess == nil {
-				endTime := e.EndTime.Time()
-				lastSuccess = &endTime
-			}
-			successes++
-			histogram += color.GreenString(".")
-		} else {
-			running++
-			histogram += color.CyanString("?")
-		}
-	}
-
-	currentlyRunning := false
-	for _, e := range executions {
-		if e.IsSuccess() {
-			health = Healthy
-			break
-		}
-		if e.IsRunning() {
-			currentlyRunning = true
-		}
-
-		if e.IsFailure() {
-			if currentlyRunning {
-				health = Unhealthy
-			} else {
-				health = Broken
-			}
-			break
-		}
-
-	}
+	health := executions.Health()
+	histogram := executions.Histogram()
 
 	fmt.Printf("%-16s %s\n", "Job health:", health.Colored())
-	fmt.Printf("%-16s %d failures, %d successes, %d running, %d total\n", "Stats:", failures, successes, running, len(executions))
+	fmt.Printf("%-16s %d failures, %d successes, %d running, %d total\n", "Stats:", histogram.Failures, histogram.Successes, histogram.Running, histogram.Total)
 	lastSuccessMessage := fmt.Sprintf("none in the last %d executions", len(executions))
-	if lastSuccess != nil {
-		lastSuccessMessage = humanize.Time(*lastSuccess)
+	if histogram.LastSuccess != nil {
+		lastSuccessMessage = humanize.Time(*histogram.LastSuccess)
 	}
 	fmt.Printf("%-16s %s\n", "Last success:", lastSuccessMessage)
-	fmt.Printf("Histogram:       %s\n", histogram)
+
+	scheduledMessage := "not scheduled"
+	if schedule.IsScheduled() {
+		scheduledMessage = fmt.Sprintf("%s", humanize.Time(schedule.NextExecTime.Time()))
+	}
+	fmt.Printf("%-16s %s\n", "Next execution:", scheduledMessage)
+	fmt.Printf("Histogram:       %s\n", histogram.Histogram)
 
 	return nil
 }
-
-type Health string
-
-func (h Health) Colored() string {
-	switch h {
-	case Healthy:
-		return color.GreenString(string(h))
-	case Unhealthy:
-		return color.YellowString(string(h))
-	case Broken:
-		return color.RedString(string(h))
-	default:
-		return string(h)
-
-	}
-}
-
-const (
-	Healthy   Health = "healthy"
-	Unhealthy        = "unhealthy"
-	Broken           = "broken"
-)

@@ -1,7 +1,7 @@
 package azkaban
 
 type ExecutionRepository interface {
-	ListExecutions(Project, Flow, Paginator) ([]Execution, error)
+	ListExecutions(Project, Flow, Paginator) (Executions, error)
 }
 
 func NewExecutionRepository(client *Client) ExecutionRepository {
@@ -14,6 +14,6 @@ type ajaxExecRepo struct {
 	azkaban *Client
 }
 
-func (r *ajaxExecRepo) ListExecutions(proj Project, f Flow, p Paginator) ([]Execution, error) {
+func (r *ajaxExecRepo) ListExecutions(proj Project, f Flow, p Paginator) (Executions, error) {
 	return r.azkaban.FlowExecutions(proj.Name, f.FlowID)
 }
