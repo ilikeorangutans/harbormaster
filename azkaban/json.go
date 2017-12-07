@@ -105,14 +105,15 @@ func (e Executions) Histogram() ExecutionHistogram {
 	for _, execution := range e {
 		if execution.IsFailure() {
 			result.Failures++
-			result.Histogram += color.RedString("X")
+
+			result.Histogram += color.RedString("⨉")
 		} else if execution.IsSuccess() {
 			if result.LastSuccess == nil {
 				endTime := execution.EndTime.Time()
 				result.LastSuccess = &endTime
 			}
 			result.Successes++
-			result.Histogram += color.GreenString(".")
+			result.Histogram += color.GreenString("•")
 		} else {
 			result.Running++
 			result.Histogram += color.CyanString("?")
@@ -253,5 +254,5 @@ func formatDuration(d time.Duration) string {
 	if d.Seconds() > 0 {
 		seconds = int(d.Seconds()) % 60
 	}
-	return fmt.Sprintf("%d:%d:%d", hours, minutes, seconds)
+	return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
 }
