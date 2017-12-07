@@ -22,6 +22,8 @@ const (
 var (
 	app = kingpin.New("harbormaster", "a thingy that makes working with the boats easier")
 
+	dumpResponses = app.Flag("dump-responses", "Dump all HTTP responses from Azkaban to stdout").Bool()
+
 	login         = app.Command("login", "authenticate against azkaban and sets session id as environment variable")
 	loginHost     = login.Arg("host", "username").Required().URL()
 	loginUsername = login.Arg("username", "username").Required().String()
@@ -98,7 +100,7 @@ func main() {
 			fmt.Fprintf(
 				w,
 				"%d \t %s \t %s \t%s \t %s\n",
-				e.ExecutionID,
+				e.ID,
 				e.Status.Colored(),
 				e.StartTime.Time().Format(time.RFC1123),
 				e.Duration(),
@@ -134,6 +136,8 @@ func getClient() *azkaban.Client {
 	if err != nil {
 		panic(err)
 	}
+
+	client.DumpResponses = *dumpResponses
 
 	return client
 }

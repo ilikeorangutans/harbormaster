@@ -15,6 +15,7 @@ var project *string
 var flow *string
 var getClient func() *azkaban.Client
 var checkCountFlag *int
+var detailCountFlag *int
 
 func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
 	s := &checkCmd{
@@ -24,7 +25,8 @@ func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
 	checkFlowCmd = cmd.Command("flow", "checks a flow").Action(s.checkFlow)
 	project = checkFlowCmd.Arg("project", "Project").Required().String()
 	flow = checkFlowCmd.Arg("flow", "Flow").HintAction(s.suggestFlow).Required().String()
-	checkCountFlag = checkFlowCmd.Flag("n", "number of executions to check").Default("20").Int()
+	checkCountFlag = checkFlowCmd.Flag("execution-count", "number of executions to check").Short('n').Default("20").Int()
+	detailCountFlag = checkFlowCmd.Flag("detail-count", "number of execution details").Short('d').Default("5").Int()
 }
 
 type checkCmd struct {
@@ -71,7 +73,7 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 
 	health := executions.Health()
 	histogram := executions.Histogram()
-	details := executions.HistogramDetails(5)
+	details := executions.HistogramDetails(*detailCountFlag)
 
 	fmt.Printf("%-16s %s\n", "Job health:", health.Colored())
 	fmt.Printf("%-16s %d failures, %d successes, %d running, %d total\n", "Stats:", histogram.Failures, histogram.Successes, histogram.Running, histogram.Total)

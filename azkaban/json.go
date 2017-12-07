@@ -128,7 +128,11 @@ func (e Executions) Histogram() ExecutionHistogram {
 func (e Executions) HistogramDetails(n int) []string {
 	lines := []string{}
 
-	for i := n - 1; i >= 0; i-- {
+	upperBound := n
+	if n > len(e) {
+		upperBound = len(e)
+	}
+	for i := upperBound - 1; i >= 0; i-- {
 		var buffer bytes.Buffer
 		buffer.WriteString(strings.Repeat("|", i))
 		buffer.WriteString("`")
@@ -138,10 +142,11 @@ func (e Executions) HistogramDetails(n int) []string {
 		execution := e[i]
 		buffer.WriteString(
 			fmt.Sprintf(
-				"%-16s %-16s %s",
+				"%-16s %-16s %s %d",
 				execution.Status.Colored(),
 				humanize.Time(execution.StartTime.Time()),
 				formatDuration(execution.Duration()),
+				execution.ID,
 			),
 		)
 
@@ -152,11 +157,12 @@ func (e Executions) HistogramDetails(n int) []string {
 }
 
 type Execution struct {
-	StartTime   AzkabanTimestamp `json:"startTime"`
-	Status      Status           `json:"status"`
-	ExecutionID int64            `json:"execId"`
-	EndTime     AzkabanTimestamp `json:"endTime"`
-	ProjectID   int64            `json:"projectId"`
+	SubmitTime AzkabanTimestamp `json:"submitTime"`
+	StartTime  AzkabanTimestamp `json:"startTime"`
+	Status     Status           `json:"status"`
+	ID         int64            `json:"execId"`
+	EndTime    AzkabanTimestamp `json:"endTime"`
+	ProjectID  int64            `json:"projectId"`
 }
 
 func (e Execution) IsFailure() bool {

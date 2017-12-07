@@ -10,9 +10,10 @@ import (
 )
 
 type Client struct {
-	SessionID string
-	http      *http.Client
-	url       string
+	SessionID     string
+	http          *http.Client
+	url           string
+	DumpResponses bool
 }
 
 func (c *Client) ListFlows(project string) ([]Flow, error) {
@@ -82,6 +83,15 @@ func (c *Client) FlowSchedule(projectID int64, flowID string) (FlowSchedule, err
 		return FlowSchedule{}, err
 	}
 	defer res.Body.Close()
+	if c.DumpResponses {
+		b, err := httputil.DumpResponse(res, true)
+		if err != nil {
+			return FlowSchedule{}, err
+		}
+
+		fmt.Printf("%s %s: \n", res.Request.Method, res.Request.URL.String())
+		fmt.Printf("%s\n", b)
+	}
 
 	decoder := json.NewDecoder(res.Body)
 	resp := ScheduleResponse{}
@@ -103,6 +113,16 @@ func (c *Client) requestAndDecode(method string, path string, params map[string]
 		return err
 	}
 	defer resp.Body.Close()
+
+	if c.DumpResponses {
+		b, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s %s: \n", method, resp.Request.URL.String())
+		fmt.Printf("%s\n", b)
+	}
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(dst)
@@ -137,6 +157,5 @@ func (c *Client) request(method string, path string, params map[string]string) (
 		q.Add(k, v)
 	}
 	req.URL.RawQuery = q.Encode()
-
 	return c.http.Do(req)
 }
