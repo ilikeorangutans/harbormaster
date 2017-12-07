@@ -125,6 +125,10 @@ func (e Executions) Histogram() ExecutionHistogram {
 	return result
 }
 
+func (e Executions) MostRecentExecution() Execution {
+	return e[0]
+}
+
 func (e Executions) HistogramDetails(n int) []string {
 	lines := []string{}
 
@@ -261,4 +265,17 @@ func formatDuration(d time.Duration) string {
 		seconds = int(d.Seconds()) % 60
 	}
 	return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
+}
+
+type FlowExecutionStatus struct {
+	Attempt   int         `json:"attempt"`
+	Status    Status      `json:"status"`
+	ProjectID int64       `json:"projectId"`
+	FlowID    string      `json:"flow"`
+	Nodes     []JobStatus `json:"nodes"`
+}
+
+type JobStatus struct {
+	ID     string `json:"id"`
+	Status Status `json:"status"`
 }

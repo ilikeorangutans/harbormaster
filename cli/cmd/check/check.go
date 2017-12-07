@@ -1,8 +1,10 @@
 package check
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"strings"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/ilikeorangutans/harbormaster/azkaban"
@@ -91,6 +93,56 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	fmt.Printf("Histogram:       %s\n", histogram.Histogram)
 	for _, l := range details {
 		fmt.Printf("%-16s %s\n", " ", l)
+	}
+
+	if health == azkaban.Critical {
+		fmt.Println()
+
+		executionID := executions.MostRecentExecution().ID
+
+		status, err := client.FlowEcecutionStatus(executionID)
+		if err != nil {
+			return err
+		}
+
+		var failedJob azkaban.JobStatus
+		for _, n := range status.Nodes {
+			if n.Status.IsFailure() {
+				failedJob = n
+				break
+			}
+		}
+
+		fmt.Printf("Execution failed in %q, log messages of interest:\n", failedJob.ID)
+		l, err := client.ExecutionJobLog(executionID, failedJob.ID)
+		if err != nil {
+			return err
+		}
+
+		scanner := bufio.NewScanner(strings.NewReader(l))
+
+		patterns := []string{
+			"err",
+			"exception",
+			"failed",
+			"failure",
+		}
+		fmt.Println(strings.Repeat("-", 80))
+		for scanner.Scan() {
+			line := scanner.Text()
+			lower := strings.ToLower(line)
+			ofInterest := false
+			for _, p := range patterns {
+				if strings.Contains(lower, p) {
+					ofInterest = true
+					break
+				}
+			}
+			if ofInterest {
+				fmt.Println(line)
+			}
+		}
+		fmt.Println(strings.Repeat("-", 80))
 	}
 
 	return nil

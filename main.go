@@ -43,7 +43,7 @@ var (
 
 	logs       = app.Command("logs", "")
 	logsJobID  = logs.Arg("jobID", "").Required().HintAction(suggestProjects).String()
-	logsExecID = logs.Arg("execID", "").Required().HintAction(suggestExecID).Int()
+	logsExecID = logs.Arg("execID", "").Required().HintAction(suggestExecID).Int64()
 )
 
 func suggestExecID() []string {

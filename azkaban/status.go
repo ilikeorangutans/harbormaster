@@ -21,9 +21,15 @@ func (s Status) ColorFunc() func(string, ...interface{}) string {
 		colorFunc = color.RedString
 	case "RUNNING":
 		colorFunc = color.CyanString
+	case "CANCELLED":
+		colorFunc = color.MagentaString
 	default:
 		colorFunc = color.WhiteString
 	}
 
 	return colorFunc
+}
+
+func (s Status) IsFailure() bool {
+	return s == "FAILED"
 }

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"strconv"
 )
 
 type Client struct {
@@ -29,16 +28,24 @@ func (c *Client) ListFlows(project string) ([]Flow, error) {
 	return flows.Flows, nil
 }
 
-func (c *Client) ExecutionJobLog(executionID int, jobID string) (string, error) {
+func (c *Client) ExecutionJobLog(executionID int64, jobID string) (string, error) {
 	params := make(map[string]string)
 	params["ajax"] = "fetchExecJobLogs"
-	params["execid"] = strconv.Itoa(executionID)
+	params["execid"] = fmt.Sprintf("%d", executionID)
 	params["jobId"] = jobID
 	params["offset"] = "0"
 	params["length"] = "10485760"
 
 	log := FlowJobLog{}
-	if err := c.requestAndDecode("GET", "executor", params, &log); err != nil {
+	resp, err := c.request("GET", "executor", params)
+
+	if err != nil {
+		return "", err
+	}
+
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&log)
+	if err != nil {
 		return "", err
 	}
 
@@ -70,6 +77,24 @@ func (c *Client) FlowJobList(project, flow string) (FlowJobList, error) {
 	jobList := FlowJobList{}
 	err := c.requestAndDecode("GET", "manager", params, &jobList)
 	return jobList, err
+}
+
+func (c *Client) FlowEcecutionStatus(executionID int64) (FlowExecutionStatus, error) {
+	status := FlowExecutionStatus{}
+
+	params := make(map[string]string)
+	params["ajax"] = "fetchexecflow"
+	params["execid"] = fmt.Sprintf("%d", executionID)
+
+	resp, err := c.request("GET", "executor", params)
+	if err != nil {
+		return status, err
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&status)
+	return status, err
 }
 
 func (c *Client) FlowSchedule(projectID int64, flowID string) (FlowSchedule, error) {
@@ -132,7 +157,7 @@ func (c *Client) requestAndDecode(method string, path string, params map[string]
 
 	azkabanResp, ok := dst.(AzkabanError)
 	if !ok {
-		log.Printf("non-azkaban response for %s %s %v", method, path, params)
+		log.Printf("non-azkaban response for %s %s", method, resp.Request.URL)
 		x, _ := httputil.DumpResponse(resp, true)
 		log.Printf("%s", x)
 		return fmt.Errorf("Bug: not an azakaban response")
