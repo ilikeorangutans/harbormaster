@@ -23,6 +23,8 @@ func (s Status) ColorFunc() func(string, ...interface{}) string {
 		colorFunc = color.CyanString
 	case "CANCELLED":
 		colorFunc = color.MagentaString
+	case "PREPARING":
+		colorFunc = color.YellowString
 	default:
 		colorFunc = color.WhiteString
 	}

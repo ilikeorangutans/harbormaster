@@ -178,11 +178,9 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 		scanner = bufio.NewScanner(os.Stdin)
 		run := true
 
-		fmt.Println("Actions: do nothing|status|restart|unschedule|logs")
-		fmt.Print("> ")
+		printActionTerm()
 		for run {
-			fmt.Println("Actions: do nothing|restart|unschedule|logs")
-			fmt.Print("> ")
+			printActionTerm()
 			run = run && scanner.Scan()
 			input := strings.ToLower(strings.TrimSpace(scanner.Text()))
 
@@ -206,4 +204,9 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	}
 
 	return nil
+}
+
+func printActionTerm() {
+	fmt.Println("Actions: do nothing|status|restart|unschedule|logs")
+	fmt.Print("> ")
 }
