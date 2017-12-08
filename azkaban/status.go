@@ -33,3 +33,7 @@ func (s Status) ColorFunc() func(string, ...interface{}) string {
 func (s Status) IsFailure() bool {
 	return s == "FAILED"
 }
+
+func (s Status) IsSuccess() bool {
+	return s == "SUCCEEDED"
+}

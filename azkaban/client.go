@@ -3,6 +3,7 @@ package azkaban
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -77,6 +78,26 @@ func (c *Client) FlowJobList(project, flow string) (FlowJobList, error) {
 	jobList := FlowJobList{}
 	err := c.requestAndDecode("GET", "manager", params, &jobList)
 	return jobList, err
+}
+
+func (c *Client) RestartFlowNow(project, flow string) error {
+	params := make(map[string]string)
+	params["ajax"] = "executeFlow"
+	params["project"] = project
+	params["flow"] = flow
+
+	resp, err := c.request("GET", "executor", params)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	log.Printf("%s", body)
+
+	return nil
 }
 
 func (c *Client) FlowEcecutionStatus(executionID int64) (FlowExecutionStatus, error) {

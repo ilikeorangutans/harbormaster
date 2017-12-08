@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -50,34 +51,46 @@ func (s *checkCmd) suggestFlow() []string {
 	return result
 }
 
-func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
-	fmt.Printf("Checking status of %s::%s...\n", *project, *flow)
+func (s *checkCmd) printSchedule(proj azkaban.Project, flow azkaban.Flow) error {
 	client := s.ctx.Client()
-	flowRepo := azkaban.NewFlowRepository(s.ctx.Client())
-	flow, proj, err := flowRepo.Flow(azkaban.Project{Name: *project}, *flow)
-	if err != nil {
-		return err
-	}
-
 	schedule, err := client.FlowSchedule(proj.ID, flow.FlowID)
 	if err != nil {
 		return err
 	}
+	scheduledMessage := "not scheduled"
+	if schedule.IsScheduled() {
+		scheduledMessage = fmt.Sprintf("%s", humanize.Time(schedule.NextExecTime.Time()))
+	}
+	fmt.Printf("%-16s %s\n", "Next execution:", scheduledMessage)
+	return nil
+}
+
+type FlowStatus struct {
+	Project       azkaban.Project
+	Flow          azkaban.Flow
+	Health        azkaban.Health
+	LastExecution azkaban.Execution
+	FailedJob     azkaban.JobStatus
+}
+
+func (s *checkCmd) printFlowStatus(proj azkaban.Project, flow azkaban.Flow) (status FlowStatus, err error) {
+	fmt.Printf("Checking status of %s %s...\n", proj.Name, flow.FlowID)
+	client := s.ctx.Client()
 	executions, err := client.FlowExecutions(proj.Name, flow.FlowID)
 	if err != nil {
-		return err
+		return status, err
 	}
 
 	if len(executions) == 0 {
 		log.Printf("no executions")
-		return nil
+		return status, nil
 	}
 
-	health := executions.Health()
+	status.Health = executions.Health()
 	histogram := executions.Histogram()
 	details := executions.HistogramDetails(*detailCountFlag)
 
-	fmt.Printf("%-16s %s\n", "Job health:", health.Colored())
+	fmt.Printf("%-16s %s\n", "Job health:", status.Health.Colored())
 	fmt.Printf("%-16s %d failures, %d successes, %d running, %d total\n", "Stats:", histogram.Failures, histogram.Successes, histogram.Running, histogram.Total)
 	lastSuccessMessage := fmt.Sprintf("none in the last %d executions", len(executions))
 	if histogram.LastSuccess != nil {
@@ -85,36 +98,53 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	}
 	fmt.Printf("%-16s %s\n", "Last success:", lastSuccessMessage)
 
-	scheduledMessage := "not scheduled"
-	if schedule.IsScheduled() {
-		scheduledMessage = fmt.Sprintf("%s", humanize.Time(schedule.NextExecTime.Time()))
+	if err := s.printSchedule(proj, flow); err != nil {
+		return status, err
 	}
-	fmt.Printf("%-16s %s\n", "Next execution:", scheduledMessage)
+
 	fmt.Printf("Histogram:       %s\n", histogram.Histogram)
 	for _, l := range details {
 		fmt.Printf("%-16s %s\n", " ", l)
 	}
 
-	if health == azkaban.Critical {
+	if status.Health == azkaban.Critical {
 		fmt.Println()
 
+		status.LastExecution = executions.MostRecentExecution()
 		executionID := executions.MostRecentExecution().ID
 
-		status, err := client.FlowEcecutionStatus(executionID)
+		flowExecstatus, err := client.FlowEcecutionStatus(executionID)
 		if err != nil {
-			return err
+			return status, err
 		}
 
-		var failedJob azkaban.JobStatus
-		for _, n := range status.Nodes {
+		for _, n := range flowExecstatus.Nodes {
 			if n.Status.IsFailure() {
-				failedJob = n
+				status.FailedJob = n
 				break
 			}
 		}
+	}
 
-		fmt.Printf("Execution failed in %q, log messages of interest:\n", failedJob.ID)
-		l, err := client.ExecutionJobLog(executionID, failedJob.ID)
+	return status, nil
+}
+
+func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
+	flowRepo := azkaban.NewFlowRepository(s.ctx.Client())
+	flow, proj, err := flowRepo.Flow(azkaban.Project{Name: *project}, *flow)
+	if err != nil {
+		return err
+	}
+
+	status, err := s.printFlowStatus(proj, flow)
+	if err != nil {
+		return err
+	}
+
+	if status.Health == azkaban.Critical {
+		fmt.Printf("Execution failed in %q, log messages of interest:\n", status.FailedJob.ID)
+		client := s.ctx.Client()
+		l, err := client.ExecutionJobLog(status.LastExecution.ID, status.FailedJob.ID)
 		if err != nil {
 			return err
 		}
@@ -143,6 +173,36 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 			}
 		}
 		fmt.Println(strings.Repeat("-", 80))
+		fmt.Println()
+
+		scanner = bufio.NewScanner(os.Stdin)
+		run := true
+
+		fmt.Println("Actions: do nothing|status|restart|unschedule|logs")
+		fmt.Print("> ")
+		for run {
+			fmt.Println("Actions: do nothing|restart|unschedule|logs")
+			fmt.Print("> ")
+			run = run && scanner.Scan()
+			input := strings.ToLower(strings.TrimSpace(scanner.Text()))
+
+			if input == "restart" {
+				client.RestartFlowNow(proj.Name, flow.FlowID)
+			} else if input == "logs" {
+				// TODO this might be slow:
+				fmt.Println(l)
+			} else if input == "status" {
+				status, err = s.printFlowStatus(proj, flow)
+				if err != nil {
+					return err
+				}
+			} else if input == "unschedule" {
+				fmt.Println("not implemented yet")
+			} else {
+				run = false
+			}
+		}
+
 	}
 
 	return nil

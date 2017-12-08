@@ -138,19 +138,25 @@ func (e Executions) HistogramDetails(n int) []string {
 	}
 	for i := upperBound - 1; i >= 0; i-- {
 		var buffer bytes.Buffer
-		buffer.WriteString(strings.Repeat("|", i))
-		buffer.WriteString("`")
-		buffer.WriteString(strings.Repeat("-", n-i))
-		buffer.WriteString(" ")
+		for j := 0; j < i; j++ {
+			// TODO might be more efficient to only switch color code when status changes
+			colorFunc := e[j].Status.ColorFunc()
+			buffer.WriteString(colorFunc("│"))
+		}
 
 		execution := e[i]
+		colorFunc := execution.Status.ColorFunc()
+
+		buffer.WriteString(colorFunc("╰"))
+		buffer.WriteString(colorFunc(strings.Repeat("─", n-i)))
+		buffer.WriteString(" ")
+
 		buffer.WriteString(
 			fmt.Sprintf(
-				"%-16s %-16s %s %d",
+				"%-16s %-16s %s",
 				execution.Status.Colored(),
 				humanize.Time(execution.StartTime.Time()),
 				formatDuration(execution.Duration()),
-				execution.ID,
 			),
 		)
 
