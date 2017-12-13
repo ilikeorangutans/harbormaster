@@ -148,7 +148,7 @@ func (e Executions) HistogramDetails(n int) []string {
 		colorFunc := execution.Status.ColorFunc()
 
 		buffer.WriteString(colorFunc("╰"))
-		buffer.WriteString(colorFunc(strings.Repeat("─", n-i)))
+		buffer.WriteString(colorFunc(strings.Repeat("─", upperBound-i)))
 		buffer.WriteString(" ")
 
 		buffer.WriteString(
