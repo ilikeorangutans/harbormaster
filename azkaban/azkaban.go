@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -25,12 +26,16 @@ func ConnectWithSessionID(url string, sessionID string) (*Client, error) {
 	}, nil
 }
 
-func ConnectWithUsernameAndPassword(url string, username string, password string) (*Client, error) {
+func ConnectWithUsernameAndPassword(u string, username string, password string) (*Client, error) {
 	client := &http.Client{
 		Timeout: time.Second * 30,
 	}
 
-	req, err := http.NewRequest("POST", url, nil)
+	form := url.Values{}
+	form.Add("username", username)
+	form.Add("password", password)
+
+	req, err := http.NewRequest("POST", u, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +44,6 @@ func ConnectWithUsernameAndPassword(url string, username string, password string
 	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	q := req.URL.Query()
 	q.Add("action", "login")
-	q.Add("username", username)
-	q.Add("password", password)
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := client.Do(req)
@@ -63,6 +66,6 @@ func ConnectWithUsernameAndPassword(url string, username string, password string
 	return &Client{
 		http:      client,
 		SessionID: status.SessionID,
-		url:       url,
+		url:       u,
 	}, nil
 }
