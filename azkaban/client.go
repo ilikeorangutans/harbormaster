@@ -16,6 +16,17 @@ type Client struct {
 	DumpResponses bool
 }
 
+func (c *Client) ListProjects() ([]Project, error) {
+	params := make(map[string]string)
+	params["ajax"] = "fetchallprojects"
+
+	projects := ListAllProjectsResponse{}
+	if err := c.requestAndDecode("GET", "index", params, &projects); err != nil {
+		return nil, err
+	}
+	return projects.Projects, nil
+}
+
 func (c *Client) ListFlows(project string) ([]Flow, error) {
 	params := make(map[string]string)
 	params["ajax"] = "fetchprojectflows"

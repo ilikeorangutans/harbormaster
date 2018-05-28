@@ -4,17 +4,16 @@ type ProjectRepository interface {
 	ListProjects() ([]Project, error)
 }
 
-func NewProjectRepository() ProjectRepository {
-	return &projectRepoImpl{}
+func NewProjectRepository(client *Client) ProjectRepository {
+	return &projectRepoImpl{
+		client: client,
+	}
 }
 
 type projectRepoImpl struct {
+	client *Client
 }
 
 func (r *projectRepoImpl) ListProjects() ([]Project, error) {
-	// TODO hardcoded for now because azkaban does not have an endpoint for this.
-	return []Project{
-		{Name: "Longboat"},
-		{Name: "LongboatStaging"},
-	}, nil
+	return r.client.ListProjects()
 }

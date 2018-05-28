@@ -67,6 +67,26 @@ func main() {
 		fmt.Printf("export %s=%s\n", AzkabanSessionIDEnv, client.SessionID)
 		fmt.Printf("export %s=%s\n", AzkabanHostEnv, (*loginHost).String())
 	case projectsList.FullCommand():
+		projectRepo := context.Projects()
+		projects, err := projectRepo.ListProjects()
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		w := new(tabwriter.Writer)
+		w.Init(os.Stdout, 8, 4, 1, '\t', 0)
+		fmt.Fprintln(w, "ID \t Name")
+
+		for _, project := range projects {
+			fmt.Fprintf(
+				w,
+				"%d \t %s \n",
+				project.ID,
+				project.Name,
+			)
+		}
+		w.Flush()
 
 	case flowsList.FullCommand():
 		client := getClient()
@@ -137,7 +157,7 @@ func getClient() *azkaban.Client {
 		panic(err)
 	}
 
-	client.DumpResponses = *dumpResponses
+	client.DumpResponses = dumpResponses != nil
 
 	return client
 }

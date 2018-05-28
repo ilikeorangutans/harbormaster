@@ -285,3 +285,12 @@ type JobStatus struct {
 	ID     string `json:"id"`
 	Status Status `json:"status"`
 }
+
+type ListAllProjectsResponse struct {
+	Projects []Project `json:"projects"`
+	Error    string    `json:"error"`
+}
+
+func (l *ListAllProjectsResponse) AzkabanError() string {
+	return ""
+}

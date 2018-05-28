@@ -15,7 +15,7 @@ func (c Context) Client() *Client {
 }
 
 func (c Context) Projects() ProjectRepository {
-	return NewProjectRepository()
+	return NewProjectRepository(c.client)
 }
 
 func (c Context) Flows() FlowRepository {

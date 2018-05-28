@@ -5,7 +5,7 @@ import (
 )
 
 func suggestProjects() []string {
-	r := azkaban.NewProjectRepository()
+	r := azkaban.NewProjectRepository(nil)
 	projects, _ := r.ListProjects()
 	var result []string
 
