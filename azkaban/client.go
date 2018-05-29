@@ -232,5 +232,16 @@ func (c *Client) request(method string, path string, params map[string]string) (
 		q.Add(k, v)
 	}
 	req.URL.RawQuery = q.Encode()
-	return c.http.Do(req)
+	resp, err := c.http.Do(req)
+	if c.DumpResponses {
+		b, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Printf("%s %s: \n", method, resp.Request.URL.String())
+		fmt.Printf("%s\n", b)
+	}
+
+	return resp, err
 }

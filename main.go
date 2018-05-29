@@ -161,7 +161,7 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
-					offset, err = client.FetchLogsUntilEnd(*logsExecID, *logsJobID, offset, os.Stdout)
+					offset, err = client.FetchLogsUntilEnd(execID, projectID, offset, os.Stdout)
 					if err != nil {
 						panic(err)
 					}
@@ -186,7 +186,7 @@ func getClient() *azkaban.Client {
 		panic(err)
 	}
 
-	// client.DumpResponses = *dumpResponses
+	client.DumpResponses = *dumpResponses
 
 	return client
 }
