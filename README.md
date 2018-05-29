@@ -11,7 +11,14 @@ Tool to check azkaban executions
   export AZKABAN_SESSION_ID=<session id>
   export AZKABAN_HOST=<azkaban url>
 ```
+
+Or run harbormaster straight in a subshell to authenticate: 
+```
+  $ $(harbormaster login <azkaban url> <user> <password>)
+```
+
 Paste these lines into your terminal and harbormaster will use these for all subsequent calls.
+
 2. Set up shell completions.
 
 For zsh: `eval "$(harbormaster  --completion-script-zsh)"`
@@ -32,15 +39,32 @@ $ harbormaster executions <project> <flow>
 
 4. Check status for a flow:
 
+This will check the most recent executions, present a histogram of these executions and details on the most recent ones.
+
 ```
 $ harbormaster check flow <project> <flow>
-
-Checking status of <project>::<flow>...
+Checking status of <project> <flow>...
 Job health:      healthy
-Stats:           2 failures, 18 successes, 0 running, 20 total
-Last success:    1 hour ago
-Histogram:       .XX.................
+Stats:           1 failures, 18 successes, 1 running, 20 total
+Last success:    5 hours ago
+Next execution:  10 hours from now
+Histogram:       ?••••••••••••••••••⨉
+                 ││││╰─ SUCCEEDED 1 day ago        1:12:02
+                 │││╰── SUCCEEDED 18 hours ago     1:05:55
+                 ││╰─── SUCCEEDED 12 hours ago     1:01:00
+                 │╰──── SUCCEEDED 6 hours ago      1:14:40
+                 ╰───── RUNNING   46 minutes ago   0:46:44
 ```
+
+5. Get logs for an execution
+
+Harbormaster can fetch execution logs and follow (automatically update) them, unlike the Azkaban web ui. Executions can be specified either by providing execid and job _or_ by pasting the entire execution url:
+
+```
+$ harbormaster logs -f <azkaban url>/executor?execid=12345&job=<job>
+```
+
+When -f is specified, harbormaster will dump the entire log and then attempt to fetch updates every 2 seconds.
 
 # References
 
