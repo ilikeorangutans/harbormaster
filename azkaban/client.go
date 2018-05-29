@@ -3,6 +3,7 @@ package azkaban
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"io/ioutil"
 	"log"
@@ -51,7 +52,7 @@ func (c *Client) FetchLogsUntilEnd(executionID int64, jobID string, offset int64
 			return 0, err
 		}
 
-		writer.Write([]byte(log.Data))
+		writer.Write([]byte(html.UnescapeString(log.Data)))
 		currentOffset += log.Length
 		if log.Length == 0 || log.Length < fetchLength {
 			break
