@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -41,9 +42,11 @@ var (
 	executionsProject = executions.Arg("project", "").Required().HintAction(suggestProjects).String()
 	executionsFlow    = executions.Arg("flow", "").Required().String()
 
-	logs       = app.Command("logs", "")
-	logsJobID  = logs.Arg("jobID", "").Required().HintAction(suggestProjects).String()
-	logsExecID = logs.Arg("execID", "").Required().HintAction(suggestExecID).Int64()
+	logs       = app.Command("logs", "Fetchs logs for an execution, either via URL or by job and exec ID")
+	logURL     = logs.Arg("url", "execution URL").URL()
+	logsJobID  = logs.Arg("jobID", "job ID").HintAction(suggestProjects).String()
+	logsExecID = logs.Arg("execID", "exec ID").HintAction(suggestExecID).Int64()
+	logsFollow = logs.Flag("follow", "follow log, indefinitely updates every 2 seconds").Short('f').Default("false").Bool()
 )
 
 func suggestExecID() []string {
@@ -132,13 +135,39 @@ func main() {
 	case logs.FullCommand():
 		client := getClient()
 
-		log, err := client.ExecutionJobLog(*logsExecID, *logsJobID)
+		var projectID string
+		var execID int64
+
+		if *logURL != nil {
+			query := (*logURL).Query()
+			execID, _ = strconv.ParseInt(query.Get("execid"), 10, 64)
+			projectID = query.Get("job")
+		} else {
+			projectID = *logsJobID
+			execID = *logsExecID
+		}
+
+		lastOffset, err := client.FetchLogsUntilEnd(execID, projectID, 0, os.Stdout)
 		if err != nil {
 			panic(err)
 		}
+		// if follow sleep and fetch more
 
-		os.Stdout.WriteString(log)
+		follow := *logsFollow
+		offset := lastOffset
+		if follow {
+			ticker := time.NewTicker(time.Second * 2)
 
+			for {
+				select {
+				case <-ticker.C:
+					offset, err = client.FetchLogsUntilEnd(*logsExecID, *logsJobID, offset, os.Stdout)
+					if err != nil {
+						panic(err)
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -157,7 +186,7 @@ func getClient() *azkaban.Client {
 		panic(err)
 	}
 
-	client.DumpResponses = dumpResponses != nil
+	// client.DumpResponses = *dumpResponses
 
 	return client
 }

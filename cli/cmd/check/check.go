@@ -2,6 +2,7 @@ package check
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -144,12 +145,13 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 	if status.Health == azkaban.Critical {
 		fmt.Printf("Execution failed in %q, log messages of interest:\n", status.FailedJob.ID)
 		client := s.ctx.Client()
-		l, err := client.ExecutionJobLog(status.LastExecution.ID, status.FailedJob.ID)
+		buffer := bytes.NewBuffer([]byte{})
+		_, err := client.FetchLogsUntilEnd(status.LastExecution.ID, status.FailedJob.ID, 0, buffer)
 		if err != nil {
 			return err
 		}
 
-		scanner := bufio.NewScanner(strings.NewReader(l))
+		scanner := bufio.NewScanner(strings.NewReader(buffer.String()))
 
 		patterns := []string{
 			"err",
@@ -188,7 +190,11 @@ func (s *checkCmd) checkFlow(ctx *kingpin.ParseContext) error {
 				client.RestartFlowNow(proj.Name, flow.FlowID)
 			} else if input == "logs" {
 				// TODO this might be slow:
-				fmt.Println(l)
+				// fmt.Println(l)
+				_, err = client.FetchLogsUntilEnd(status.LastExecution.ID, status.FailedJob.ID, 0, os.Stdout)
+				if err != nil {
+					return err
+				}
 			} else if input == "status" {
 				status, err = s.printFlowStatus(proj, flow)
 				if err != nil {

@@ -3,6 +3,7 @@ package azkaban
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -40,28 +41,44 @@ func (c *Client) ListFlows(project string) ([]Flow, error) {
 	return flows.Flows, nil
 }
 
-func (c *Client) ExecutionJobLog(executionID int64, jobID string) (string, error) {
+// FetchLogsUntilEnd fetchs all logs from the given offset till the end and outputs them to the given writer
+func (c *Client) FetchLogsUntilEnd(executionID int64, jobID string, offset int64, writer io.Writer) (int64, error) {
+	fetchLength := int64(1024 * 512)
+	currentOffset := offset
+	for {
+		log, err := c.FetchExecutionJobLog(executionID, jobID, currentOffset, fetchLength)
+		if err != nil {
+			return 0, err
+		}
+
+		writer.Write([]byte(log.Data))
+		currentOffset += log.Length
+		if log.Length == 0 || log.Length < fetchLength {
+			break
+		}
+	}
+
+	return currentOffset, nil
+}
+
+func (c *Client) FetchExecutionJobLog(executionID int64, jobID string, offset int64, length int64) (FlowJobLog, error) {
 	params := make(map[string]string)
 	params["ajax"] = "fetchExecJobLogs"
 	params["execid"] = fmt.Sprintf("%d", executionID)
 	params["jobId"] = jobID
-	params["offset"] = "0"
-	params["length"] = "10485760"
+	params["offset"] = fmt.Sprintf("%d", offset)
+	params["length"] = fmt.Sprintf("%d", length)
 
 	log := FlowJobLog{}
 	resp, err := c.request("GET", "executor", params)
 
 	if err != nil {
-		return "", err
+		return log, err
 	}
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&log)
-	if err != nil {
-		return "", err
-	}
-
-	return log.Data, nil
+	return log, err
 }
 
 func (c *Client) FlowExecutions(project, flow string) (Executions, error) {
