@@ -1,14 +1,16 @@
 
 GO_SOURCES=$(shell find ./ -type f -name '*.go')
+BINARY=harbormaster
+MAC_OS_X_ZIP=harbormaster-macosx.zip
 
 .PHONY:
-all: harbormaster
+all: $(BINARY)
 
 .PHONY:
-install: harbormaster
+install: $(BINARY)
 	go install .
 
-harbormaster: $(GO_SOURCES)
+$(BINARY): $(GO_SOURCES)
 	go build ./
 
 .PHONY:
@@ -17,5 +19,11 @@ test:
 
 .PHONY:
 clean:
-	rm harbormaster
+	rm $(BINARY)
+
+.PHONY:
+dist: $(MAC_OS_X_ZIP)
+
+$(MAC_OS_X_ZIP): $(BINARY)
+	zip -9 harbormaster-macosx.zip harbormaster
 
