@@ -2,3 +2,8 @@
 vendor
 harbormaster
 harbormaster-macosx.zip
+
+azkaban-*
+tags
+tags.*
+
