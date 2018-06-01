@@ -30,23 +30,20 @@ var (
 	loginUsername = login.Arg("username", "username").Required().String()
 	loginPassword = login.Arg("password", "password").Required().String()
 
-	projects     = app.Command("project", "")
-	projectsList = projects.Command("list", "")
-
-	flows        = app.Command("flow", "")
-	flowsList    = flows.Command("list", "")
-	flowsProject = flowsList.Arg("project", "").Required().HintAction(suggestProjects).String()
-	flowsFilter  = flowsList.Arg("filter", "").String()
-
-	executions        = app.Command("executions", "")
-	executionsProject = executions.Arg("project", "").Required().HintAction(suggestProjects).String()
-	executionsFlow    = executions.Arg("flow", "").Required().String()
-
 	logs       = app.Command("logs", "Fetchs logs for an execution, either via URL or by job and exec ID")
 	logURL     = logs.Arg("url", "execution URL").URL()
 	logsJobID  = logs.Arg("jobID", "job ID").HintAction(suggestProjects).String()
 	logsExecID = logs.Arg("execID", "exec ID").HintAction(suggestExecID).Int64()
 	logsFollow = logs.Flag("follow", "follow log, indefinitely updates every 2 seconds").Short('f').Default("false").Bool()
+
+	get                  = app.Command("get", "get things from azkaban").Alias("g")
+	getProjects          = get.Command("projects", "get all projects").Alias("p")
+	getFlows             = get.Command("flows", "get flows").Alias("f")
+	getFlowsFilter       = getFlows.Arg("filter", "show only flows with this prefix").String()
+	getFlowsProject      = getFlows.Flag("project", "project, can be set by HARBORMASTER_PROJECT").Envar("HARBORMASTER_PROJECT").String()
+	getExecutions        = get.Command("executions", "get executions").Alias("e")
+	getExecutionsFlow    = getExecutions.Arg("flow", "name of flow to fetch executions for").String()
+	getExecutionsProject = getExecutions.Flag("project", "project, can be set by HARBORMASTER_PROJECT").Envar("HARBORMASTER_PROJECT").String()
 )
 
 func suggestExecID() []string {
@@ -69,7 +66,8 @@ func main() {
 
 		fmt.Printf("export %s=%s\n", AzkabanSessionIDEnv, client.SessionID)
 		fmt.Printf("export %s=%s\n", AzkabanHostEnv, (*loginHost).String())
-	case projectsList.FullCommand():
+
+	case getProjects.FullCommand():
 		projectRepo := context.Projects()
 		projects, err := projectRepo.ListProjects()
 		if err != nil {
@@ -91,17 +89,17 @@ func main() {
 		}
 		w.Flush()
 
-	case flowsList.FullCommand():
+	case getFlows.FullCommand():
 		client := getClient()
 
-		flows, err := client.ListFlows(*flowsProject)
+		flows, err := client.ListFlows(*getFlowsProject)
 		if err != nil {
 			panic(err)
 		}
 
 		for _, f := range flows {
-			if len(*flowsFilter) > 0 {
-				if strings.HasPrefix(f.FlowID, *flowsFilter) {
+			if len(*getFlowsFilter) > 0 {
+				if strings.HasPrefix(f.FlowID, *getFlowsFilter) {
 					fmt.Printf("%s\n", f.FlowID)
 				}
 			} else {
@@ -109,10 +107,10 @@ func main() {
 			}
 		}
 
-	case executions.FullCommand():
+	case getExecutions.FullCommand():
 		client := getClient()
 
-		executions, err := client.FlowExecutions(*executionsProject, *executionsFlow)
+		executions, err := client.FlowExecutions(*getExecutionsProject, *getExecutionsFlow)
 		if err != nil {
 			panic(err)
 		}
