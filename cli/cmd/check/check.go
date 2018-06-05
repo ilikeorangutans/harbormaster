@@ -27,7 +27,7 @@ func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
 	}
 	cmd = app.Command("check", "")
 	checkFlowCmd = cmd.Command("flow", "checks a flow").Action(s.checkFlow)
-	project = checkFlowCmd.Arg("project", "Project").Required().String()
+	project = checkFlowCmd.Flag("project", "Project").Envar("HARBORMASTER_PROJECT").Required().String()
 	flow = checkFlowCmd.Arg("flow", "Flow").HintAction(s.suggestFlow).Required().String()
 	checkCountFlag = checkFlowCmd.Flag("execution-count", "number of executions to check").Short('n').Default("20").Int()
 	detailCountFlag = checkFlowCmd.Flag("detail-count", "number of execution details").Short('d').Default("5").Int()
