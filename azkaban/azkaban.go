@@ -32,6 +32,7 @@ func ConnectWithUsernameAndPassword(u string, username string, password string) 
 	}
 
 	form := url.Values{}
+	form.Add("action", "login")
 	form.Add("username", username)
 	form.Add("password", password)
 
@@ -41,10 +42,6 @@ func ConnectWithUsernameAndPassword(u string, username string, password string) 
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("X-Requested-With", "XMLHttpRequest")
-	q := req.URL.Query()
-	q.Add("action", "login")
-	req.URL.RawQuery = q.Encode()
 
 	resp, err := client.Do(req)
 	if err != nil {
