@@ -207,7 +207,7 @@ func (h FlowStatusChecker) printFlowStatus() (status FlowStatus, err error) {
 		status.LastExecution = executions.MostRecentExecution()
 		executionID := executions.MostRecentExecution().ID
 
-		flowExecStatus, err := client.FlowEcecutionStatus(executionID)
+		flowExecStatus, err := client.FlowExecutionStatus(executionID)
 		if err != nil {
 			return status, err
 		}

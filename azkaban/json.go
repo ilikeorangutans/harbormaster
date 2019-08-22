@@ -258,22 +258,6 @@ func (t AzkabanStringTime) Time() time.Time {
 	return time.Time(t)
 }
 
-func formatDuration(d time.Duration) string {
-	hours := 0
-	if d.Hours() >= 1.0 {
-		hours = int(d.Hours())
-	}
-	minutes := 0
-	if d.Minutes() > 0 {
-		minutes = int(d.Minutes()) % 60
-	}
-	seconds := 0
-	if d.Seconds() > 0 {
-		seconds = int(d.Seconds()) % 60
-	}
-	return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
-}
-
 type FlowExecutionStatus struct {
 	Attempt   int         `json:"attempt"`
 	Status    Status      `json:"status"`
