@@ -25,13 +25,18 @@ test:
 
 .PHONY:
 clean:
-	rm $(BINARY)
+	-rm $(BINARY)
+	-rm -rf dist
 
 .PHONY:
-dist: $(MAC_OS_X_ZIP)
+dist-all: dist/harbormaster-darwin.zip dist/harbormaster-linux.zip dist/harbormaster-windows.zip
 
-$(MAC_OS_X_ZIP): $(BINARY)
-	zip -9 harbormaster-macosx.zip harbormaster
+dist/harbormaster-%.zip: dist/%/harbormaster
+	cd dist/$* && zip -9 ../harbormaster-$*.zip harbormaster
+
+dist/%/harbormaster: $(GO_SOURCES)
+	mkdir -vp dist/$*
+	GOOS=$* GOARCH=amd64 go build -o dist/$*/harbormaster
 
 .PHONY:
 start-azkaban: $(AZKABAN_DIR)

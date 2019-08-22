@@ -7,3 +7,5 @@ azkaban-*
 tags
 tags.*
 
+dist
+.idea
