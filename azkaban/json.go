@@ -3,11 +3,12 @@ package azkaban
 import (
 	"bytes"
 	"fmt"
+	"github.com/ilikeorangutans/harbormaster/format"
 	"strconv"
 	"strings"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 )
 
@@ -130,7 +131,7 @@ func (e Executions) MostRecentExecution() Execution {
 }
 
 func (e Executions) HistogramDetails(n int) []string {
-	lines := []string{}
+	var lines []string
 
 	upperBound := n
 	if n > len(e) {
@@ -156,7 +157,7 @@ func (e Executions) HistogramDetails(n int) []string {
 				"%-16s %-16s %s",
 				execution.Status.Colored(),
 				humanize.Time(execution.StartTime.Time()),
-				formatDuration(execution.Duration()),
+				format.DurationHumanReadable(execution.Duration()),
 			),
 		)
 

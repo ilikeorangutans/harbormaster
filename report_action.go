@@ -1,45 +1,38 @@
-package report
+package main
 
 import (
 	"fmt"
+	"github.com/ilikeorangutans/harbormaster/azkaban"
+	"github.com/urfave/cli"
 	"strings"
 	"time"
-
-	"github.com/ilikeorangutans/harbormaster/azkaban"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
-var (
-	project    *string
-	flowFilter *string
-)
-
-func ConfigureCommand(app *kingpin.Application, ctx *azkaban.Context) {
-	cmd := &execReportCmd{
-		ctx: ctx,
+func SetupReportActions() cli.Command {
+	handler := ReportActionsHandler{}
+	return cli.Command{
+		Name:      "report",
+		Usage:     "average execution time as tab-delimited list",
+		ArgsUsage: "flow-prefix",
+		Action:    handler.ExecutionTimeReport,
 	}
-
-	reportCmd := app.Command("report", "")
-	execReport := reportCmd.Command("exec-time", "average execution time as tab-delimited list").Action(cmd.execReport)
-	project = execReport.Arg("project", "").Required().String()
-	flowFilter = execReport.Arg("flow-prefix", "prefix filter").String()
 }
 
-type execReportCmd struct {
-	ctx *azkaban.Context
+type ReportActionsHandler struct {
+	ActionWithContext
 }
 
-func (e *execReportCmd) execReport(ctx *kingpin.ParseContext) error {
-	proj := azkaban.Project{Name: *project}
-	flows, err := e.ctx.Flows().ListFlows(proj)
+func (h ReportActionsHandler) ExecutionTimeReport(c *cli.Context) error {
+	proj := azkaban.Project{Name: c.GlobalString("p")}
+	flows, err := h.Context().Flows().ListFlows(proj)
 	if err != nil {
 		return err
 	}
 
 	var filteredFlows []azkaban.Flow
-	if len(*flowFilter) > 0 {
+	if c.Args().Present() {
 		for _, f := range flows {
-			if strings.HasPrefix(f.FlowID, *flowFilter) {
+			if strings.HasPrefix(f.FlowID, c.Args().First()) {
 				filteredFlows = append(filteredFlows, f)
 			}
 		}
@@ -47,8 +40,8 @@ func (e *execReportCmd) execReport(ctx *kingpin.ParseContext) error {
 		filteredFlows = flows
 	}
 
-	data := []execReportData{}
-	execRepo := e.ctx.Executions()
+	var data []execReportData
+	execRepo := h.Context().Executions()
 
 	for _, f := range filteredFlows {
 		executions, err := execRepo.ListExecutions(proj, f, azkaban.TenMostRecent)
@@ -60,7 +53,7 @@ func (e *execReportCmd) execReport(ctx *kingpin.ParseContext) error {
 			FlowID: f.FlowID,
 		}
 
-		var totalTimeSeconds time.Duration = 0.0
+		var totalTime time.Duration = 0.0
 		for _, exec := range executions {
 			execData.TotalCount++
 			if !exec.IsSuccess() {
@@ -68,11 +61,11 @@ func (e *execReportCmd) execReport(ctx *kingpin.ParseContext) error {
 			}
 			execData.SuccessCount++
 
-			totalTimeSeconds += exec.Duration()
+			totalTime += exec.Duration()
 		}
 
 		if execData.SuccessCount > 0 {
-			execData.AverageTime = time.Duration(totalTimeSeconds / time.Duration(execData.SuccessCount))
+			execData.AverageTime = totalTime / time.Duration(execData.SuccessCount)
 		}
 		data = append(data, execData)
 	}
