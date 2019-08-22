@@ -40,12 +40,49 @@ func SetupGetActions() cli.Command {
 				Action:    handlers.GetExecutionsAction,
 				ArgsUsage: "flow",
 			},
+			{
+				Name:    "running",
+				Aliases: []string{"r"},
+				Usage:   "lists running executions",
+				Action:  handlers.GetRunningAction,
+			},
 		},
 	}
 }
 
 type GetActionsHandler struct {
 	ActionWithContext
+}
+
+func (a *GetActionsHandler) GetRunningAction(c *cli.Context) error {
+	executions, err := a.Client().Running()
+
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 4, 4, 2, ' ', 0)
+	fmt.Fprintf(
+		w,
+		"%s\t%s\t%s\t%s\t%s\n",
+		"Project",
+		"FlowID",
+		color.WhiteString("Status"),
+		"Start time",
+		"Runtime",
+	)
+
+	for _, execution := range executions {
+		fmt.Fprintf(
+			w,
+			"%s\t%s\t%s\t%s\t%s\n",
+			execution.Project,
+			execution.FlowID,
+			execution.Status.Colored(),
+			humanize.Time(execution.StartTime.Time()),
+			format.DurationHumanReadable(time.Since(execution.StartTime.Time())),
+		)
+	}
+
+	w.Flush()
+	return err
 }
 
 func (a *GetActionsHandler) GetExecutionsAction(c *cli.Context) error {

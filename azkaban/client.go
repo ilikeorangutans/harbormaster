@@ -2,13 +2,17 @@ package azkaban
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	htmlx "golang.org/x/net/html"
 	"html"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"strconv"
+	"time"
 )
 
 type Client struct {
@@ -129,7 +133,7 @@ func (c *Client) RestartFlowNow(project, flow string) error {
 	return nil
 }
 
-func (c *Client) FlowEcecutionStatus(executionID int64) (FlowExecutionStatus, error) {
+func (c *Client) FlowExecutionStatus(executionID int64) (FlowExecutionStatus, error) {
 	status := FlowExecutionStatus{}
 
 	params := make(map[string]string)
@@ -180,6 +184,120 @@ func (c *Client) FlowSchedule(projectID int64, flowID string) (FlowSchedule, err
 	} else {
 		return *resp.Schedule, err
 	}
+}
+
+func (c *Client) Running() ([]FlowExecution, error) {
+	resp, err := c.request("GET", "executor", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("got %d %s when retrieving running executions", resp.StatusCode, resp.Status))
+	}
+
+	defer resp.Body.Close()
+	doc, err := htmlx.Parse(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Azkaban serves the login page simply with a HTTP 200 so the only way to check if we're looking at the login page
+	// is by looking for the login element.
+	if findElementWithID(doc,"username") != nil && findElementWithID(doc, "password") != nil {
+		return nil, errors.New("credentials expired, reauthenticate")
+	}
+
+	table := findElementWithID(doc, "executingJobs")
+
+	return findExecutions(table)
+}
+
+type FlowExecution struct {
+	FlowID  string
+	Project string
+	Execution
+}
+
+func findExecutions(n *htmlx.Node) ([]FlowExecution, error) {
+	tbody := findElementsOfType(n, "tbody")
+	rows := findElementsOfType(tbody[0], "tr")
+
+	var executions []FlowExecution
+	for _, row := range rows {
+		cells := findElementsOfType(row, "td")
+
+		execID, err := strconv.ParseInt(findElementsOfType(cells[1], "a")[0].FirstChild.Data, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		flowID := findElementsOfType(cells[3], "a")[0].FirstChild.Data
+		project := findElementsOfType(cells[4], "a")[0].FirstChild.Data
+		// TODO project ID is not part of the actual link so we can't parse it. We'll have to fetch projects before we do this
+		// parsing time "2019-08-21 01:53:42" as "Jan 2, 2006 at 3:04pm": cannot parse "2019-08-21 01:53:42" as "Jan"
+		startTime, err := time.Parse("2006-01-02 15:04:05", cells[7].FirstChild.Data)
+		if err != nil {
+			return nil, err
+		}
+
+		execution := FlowExecution{
+			FlowID:  flowID,
+			Project: project,
+			Execution: Execution{
+				SubmitTime: AzkabanTimestamp{},
+				StartTime:  AzkabanTimestamp(startTime),
+				Status:     "RUNNING",
+				ID:         execID,
+				EndTime:    AzkabanTimestamp(time.Now()),
+			},
+		}
+
+		executions = append(executions, execution)
+	}
+
+	return executions, nil
+}
+
+func getAttribute(n *htmlx.Node, name string) string {
+	for _, a := range n.Attr {
+		if a.Key == name {
+			return a.Val
+		}
+	}
+	return ""
+}
+
+func findElementsOfType(n *htmlx.Node, t string) []*htmlx.Node {
+	var result []*htmlx.Node
+	if n.Type == htmlx.ElementNode && n.Data == t {
+		result = append(result, n)
+	}
+
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		result = append(result, findElementsOfType(c, t)...)
+	}
+
+	return result
+}
+
+func findElementWithID(n *htmlx.Node, id string) *htmlx.Node {
+	if hasAttribute(n, "id", id) {
+		return n;
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if result := findElementWithID(c, id); result != nil {
+			return result
+		}
+	}
+	return nil
+}
+
+func hasAttribute(n *htmlx.Node, name string, value string) bool {
+	for _, a := range n.Attr {
+		if a.Key == name && a.Val == value {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Client) requestAndDecode(method string, path string, params map[string]string, dst interface{}) error {
