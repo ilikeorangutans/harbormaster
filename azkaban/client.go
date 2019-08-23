@@ -203,7 +203,7 @@ func (c *Client) Running() ([]FlowExecution, error) {
 
 	// Azkaban serves the login page simply with a HTTP 200 so the only way to check if we're looking at the login page
 	// is by looking for the login element.
-	if findElementWithID(doc,"username") != nil && findElementWithID(doc, "password") != nil {
+	if findElementWithID(doc, "username") != nil && findElementWithID(doc, "password") != nil {
 		return nil, errors.New("credentials expired, reauthenticate")
 	}
 
