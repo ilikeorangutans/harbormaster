@@ -3,19 +3,23 @@ package cli
 import (
 	"fmt"
 	"github.com/ilikeorangutans/harbormaster/azkaban"
+	"github.com/ilikeorangutans/harbormaster/format"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 )
 
 func NewReportCmd(context Context) *cobra.Command {
-	reportCmd := &cobra.Command{
-		Use:   "report",
-		Short: "average execution time as tab-delimited list",
+	averageExecutionTimeCmd := &cobra.Command{
+		Use:     "average-execution-time",
+		Aliases: []string{"aet"},
+		Short:   "average execution time ",
 		Run: func(cmd *cobra.Command, args []string) {
-			proj := azkaban.Project{Name: context.Project()}
-			flows, err := context.Context().Flows().ListFlows(proj)
+			project := azkaban.Project{Name: context.Project()}
+			flows, err := context.Context().Flows().ListFlows(project)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -35,7 +39,7 @@ func NewReportCmd(context Context) *cobra.Command {
 			execRepo := context.Context().Executions()
 
 			for _, f := range filteredFlows {
-				executions, err := execRepo.ListExecutions(proj, f, azkaban.TenMostRecent)
+				executions, err := execRepo.ListExecutions(project, f, azkaban.TenMostRecent)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -61,12 +65,24 @@ func NewReportCmd(context Context) *cobra.Command {
 				data = append(data, execData)
 			}
 
-			fmt.Printf("FlowID \tSuccess Count \t Average Time\n")
-			for _, d := range data {
-				fmt.Printf("%s \t %4d \t%s\n", d.FlowID, d.SuccessCount, formatDuration(d.AverageTime))
+			formatter := consoleFormatter
+			format, err := cmd.Flags().GetString("format")
+			if err != nil {
+				log.Fatal(err)
 			}
+			if format == "tsv" {
+				formatter = tsvFormatter
+			}
+
+			formatter(data)
 		},
 	}
+	averageExecutionTimeCmd.Flags().StringP("format", "f", "console", "format to display data in, valid are [console, tsv]")
+
+	reportCmd := &cobra.Command{
+		Use: "report",
+	}
+	reportCmd.AddCommand(averageExecutionTimeCmd)
 
 	return reportCmd
 }
@@ -92,4 +108,36 @@ type execReportData struct {
 	SuccessCount int
 	TotalCount   int
 	AverageTime  time.Duration
+}
+
+func consoleFormatter(data []execReportData) {
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 4, 4, 2, ' ', 0)
+	fmt.Fprintf(
+		w,
+		"%s\t%s\t%s\t%s\n",
+		"FlowID",
+		"Success Count",
+		"Failure Count",
+		"Average Time",
+	)
+	for _, d := range data {
+		fmt.Fprintf(
+			w,
+			"%s\t%d\t%d\t%s\n",
+			d.FlowID,
+			d.SuccessCount,
+			d.TotalCount-d.SuccessCount,
+			format.DurationHumanReadable(d.AverageTime),
+		)
+	}
+	w.Flush()
+
+}
+
+func tsvFormatter(data []execReportData) {
+	fmt.Printf("FlowID \tSuccess Count \t Average Time\n")
+	for _, d := range data {
+		fmt.Printf("%s \t %4d \t%s\n", d.FlowID, d.SuccessCount, formatDuration(d.AverageTime))
+	}
 }
