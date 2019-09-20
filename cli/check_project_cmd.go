@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -27,22 +28,23 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			maxFlowNameWidth := 40
 			var flows []azkaban.Flow
 			for _, flow := range allFlows {
 				if flowNamePredicate(flow.FlowID) {
 					flows = append(flows, flow)
-					if len(flow.FlowID) > maxFlowNameWidth {
-						maxFlowNameWidth = len(flow.FlowID)
-					}
 				}
 			}
 
-			formatString := fmt.Sprintf("%%-%ds \t %%s \t %%s \n", maxFlowNameWidth)
-
 			w := new(tabwriter.Writer)
-			w.Init(os.Stdout, 2, 8, 1, '\t', 0)
-			fmt.Fprintf(w, fmt.Sprintf("%%-%ds \t %%s \t %%s\n", maxFlowNameWidth), "Flow", color.WhiteString("Health"), color.WhiteString("Histogram (← most recent)"))
+			w.Init(os.Stdout, 2, 8, 1, ' ', 0)
+			columns := []interface{}{
+				"Flow",
+				color.WhiteString("Health"),
+				color.WhiteString("Histogram (← most recent)"),
+			}
+			headerFormat := strings.Join([]string{"%s", "%-20s", "%s\n"}, "\t")
+			rowFormat := strings.Join([]string{"%s", "%-20s", "%s\n"}, "\t")
+			fmt.Fprintf(w, headerFormat, columns...)
 
 			for _, f := range flows {
 				executions, err := context.Context().Executions().ListExecutions(project, f, azkaban.TenMostRecent)
@@ -52,15 +54,18 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 
 				fmt.Fprintf(
 					w,
-					formatString,
+					rowFormat,
 					f.FlowID,
 					executions.Health().Colored(),
 					executions.Histogram().Histogram,
 				)
-
-				w.Flush()
+				if executions.Histogram().Failures > 0 {
+					for _, line := range executions.HistogramDetails(3) {
+						fmt.Fprintf(w, rowFormat, "", color.WhiteString(""), line)
+					}
+				}
 			}
-
+			w.Flush()
 		},
 	}
 }
