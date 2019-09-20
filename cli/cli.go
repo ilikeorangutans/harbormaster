@@ -21,7 +21,7 @@ func NewCLI() *cobra.Command {
 	rootCmd.AddCommand(NewLoginCmd(context))
 	rootCmd.AddCommand(NewGetCmd(context))
 	rootCmd.AddCommand(NewLogCmd(context))
-	rootCmd.AddCommand(NewCheckFlowCmd(context))
+	rootCmd.AddCommand(NewCheckCmd(context))
 	rootCmd.AddCommand(NewReportCmd(context))
 
 	completionCommand := &cobra.Command{

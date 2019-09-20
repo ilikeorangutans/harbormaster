@@ -58,7 +58,6 @@ func NewLogCmd(context Context) *cobra.Command {
 					}
 				}
 			}
-
 		},
 	}
 

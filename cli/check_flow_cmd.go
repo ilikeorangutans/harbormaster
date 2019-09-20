@@ -12,14 +12,8 @@ import (
 	"strings"
 )
 
-func NewCheckFlowCmd(context Context) *cobra.Command {
-	checkCmd := &cobra.Command{
-		Use:     "check",
-		Aliases: []string{"c"},
-		Short:   "checks things",
-	}
-
-	checkFlowCmd := &cobra.Command{
+func newCheckFlowCmd(context Context) *cobra.Command {
+	return &cobra.Command{
 		Use:     "flow",
 		Aliases: []string{"f"},
 		Short:   "check a given flow",
@@ -110,9 +104,6 @@ func NewCheckFlowCmd(context Context) *cobra.Command {
 			}
 		},
 	}
-	checkCmd.AddCommand(checkFlowCmd)
-
-	return checkCmd
 }
 
 type FlowStatusChecker struct {

@@ -59,6 +59,24 @@ func newGetProjectsCmd(context Context) *cobra.Command {
 	}
 }
 
+func predicateFromArgs(args []string, position int) func(string) bool {
+	if len(args) > position {
+		regexString := args[position]
+		if strings.HasPrefix(regexString, "/") && strings.HasSuffix(regexString, "/") {
+			regex, err := regexp.Compile(regexString[1 : len(args[position])-1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			return func(s string) bool { return regex.MatchString(s) }
+		} else {
+			return func(s string) bool { return strings.HasPrefix(s, args[position]) }
+		}
+	} else {
+		return func(string) bool { return true }
+	}
+
+}
+
 func newGetFlowsCmd(context Context) *cobra.Command {
 	return &cobra.Command{
 		Use:     "flows",
@@ -73,21 +91,7 @@ func newGetFlowsCmd(context Context) *cobra.Command {
 				log.Fatal(err)
 			}
 
-			var predicate func(string) bool
-			if len(args) > 0 {
-				regexString := args[0]
-				if strings.HasPrefix(regexString, "/") && strings.HasSuffix(regexString, "/") {
-					regex, err := regexp.Compile(regexString[1 : len(args[0])-1])
-					if err != nil {
-						log.Fatal(err)
-					}
-					predicate = func(s string) bool { return regex.MatchString(s) }
-				} else {
-					predicate = func(s string) bool { return strings.HasPrefix(s, args[0]) }
-				}
-			} else {
-				predicate = func(string) bool { return true }
-			}
+			predicate := predicateFromArgs(args, 0)
 
 			for _, f := range flows {
 				if predicate(f.FlowID) {
