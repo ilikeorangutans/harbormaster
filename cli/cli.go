@@ -21,7 +21,7 @@ func NewCLI() *cobra.Command {
 	rootCmd.AddCommand(NewLoginCmd(context))
 	rootCmd.AddCommand(NewGetCmd(context))
 	rootCmd.AddCommand(NewLogCmd(context))
-	rootCmd.AddCommand(NewCheckFlowCmd(context))
+	rootCmd.AddCommand(NewCheckCmd(context))
 	rootCmd.AddCommand(NewReportCmd(context))
 
 	completionCommand := &cobra.Command{
@@ -42,7 +42,7 @@ To configure your bash shell to load completions for each session add to your ba
 . <(harbormaster completion zsh)
 `,
 		Run: func(cmd *cobra.Command, args []string) {
-			rootCmd.GenBashCompletion(os.Stdout);
+			rootCmd.GenBashCompletion(os.Stdout)
 		},
 	})
 
@@ -51,7 +51,7 @@ To configure your bash shell to load completions for each session add to your ba
 		Short: "Generates zsh completion scripts",
 		Long:  "Place the output in a file called _harbormaster somewhere in your $fpath, usually ~/.zsh/completions/_harbormaster",
 		Run: func(cmd *cobra.Command, args []string) {
-			rootCmd.GenZshCompletion(os.Stdout);
+			rootCmd.GenZshCompletion(os.Stdout)
 		},
 	})
 

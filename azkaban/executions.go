@@ -15,5 +15,5 @@ type ajaxExecRepo struct {
 }
 
 func (r *ajaxExecRepo) ListExecutions(proj Project, f Flow, p Paginator) (Executions, error) {
-	return r.azkaban.FlowExecutions(proj.Name, f.FlowID)
+	return r.azkaban.FlowExecutions(proj.Name, f.FlowID, p)
 }

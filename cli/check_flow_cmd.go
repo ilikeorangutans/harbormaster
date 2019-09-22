@@ -12,14 +12,8 @@ import (
 	"strings"
 )
 
-func NewCheckFlowCmd(context Context) *cobra.Command {
-	checkCmd := &cobra.Command{
-		Use:     "check",
-		Aliases: []string{"c"},
-		Short:   "checks things",
-	}
-
-	checkFlowCmd := &cobra.Command{
+func newCheckFlowCmd(context Context) *cobra.Command {
+	return &cobra.Command{
 		Use:     "flow",
 		Aliases: []string{"f"},
 		Short:   "check a given flow",
@@ -110,9 +104,6 @@ func NewCheckFlowCmd(context Context) *cobra.Command {
 			}
 		},
 	}
-	checkCmd.AddCommand(checkFlowCmd)
-
-	return checkCmd
 }
 
 type FlowStatusChecker struct {
@@ -140,7 +131,7 @@ func (h FlowStatusChecker) printSchedule() error {
 func (h FlowStatusChecker) printFlowStatus() (status FlowStatus, err error) {
 	fmt.Printf("Checking status of %s %s...\n", h.project.Name, h.flow.FlowID)
 	client := h.client
-	executions, err := client.FlowExecutions(h.project.Name, h.flow.FlowID)
+	executions, err := client.FlowExecutions(h.project.Name, h.flow.FlowID, azkaban.TenMostRecent)
 	if err != nil {
 		return status, err
 	}
