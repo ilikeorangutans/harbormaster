@@ -3,11 +3,10 @@ module github.com/ilikeorangutans/harbormaster
 go 1.12
 
 require (
+	github.com/briandowns/spinner v1.7.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.5.0
+	github.com/fatih/color v1.7.0
 	github.com/magiconair/properties v1.8.1 // indirect
-	github.com/mattn/go-colorable v0.0.9 // indirect
-	github.com/mattn/go-isatty v0.0.3 // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.5

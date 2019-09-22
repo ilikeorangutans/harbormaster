@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 	"github.com/ilikeorangutans/harbormaster/azkaban"
 	"github.com/spf13/cobra"
@@ -9,15 +10,22 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 )
 
 func newCheckProjectCmd(context Context) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "project",
 		Aliases: []string{"p"},
 		Args:    cobra.RangeArgs(1, 2),
 		Short:   "check flows of a project",
+
 		Run: func(cmd *cobra.Command, args []string) {
+
+			s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+			s.Start()
+			s.Suffix = " fetching flows..."
+
 			flowNamePredicate := predicateFromArgs(args, 1)
 			project, err := context.Context().Projects().ByName(args[0])
 			if err != nil {
@@ -46,7 +54,8 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 			rowFormat := strings.Join([]string{"%s", "%-20s", "%s\n"}, "\t")
 			fmt.Fprintf(w, headerFormat, columns...)
 
-			for _, f := range flows {
+			for i, f := range flows {
+				s.Suffix = fmt.Sprintf(" fetching execution %d/%d", i, len(flows))
 				executions, err := context.Context().Executions().ListExecutions(project, f, azkaban.TenMostRecent)
 				if err != nil {
 					log.Fatal(err)
@@ -65,7 +74,10 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 					}
 				}
 			}
+			s.Stop()
 			w.Flush()
 		},
 	}
+
+	return cmd
 }
