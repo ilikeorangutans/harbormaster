@@ -131,7 +131,7 @@ func (h FlowStatusChecker) printSchedule() error {
 func (h FlowStatusChecker) printFlowStatus() (status FlowStatus, err error) {
 	fmt.Printf("Checking status of %s %s...\n", h.project.Name, h.flow.FlowID)
 	client := h.client
-	executions, err := client.FlowExecutions(h.project.Name, h.flow.FlowID)
+	executions, err := client.FlowExecutions(h.project.Name, h.flow.FlowID, azkaban.TenMostRecent)
 	if err != nil {
 		return status, err
 	}

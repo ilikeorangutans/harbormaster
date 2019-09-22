@@ -9,7 +9,7 @@ import (
 type Status string
 
 func (s Status) Colored() string {
-	return s.ColorFunc()((fmt.Sprintf("%-9s", s)))
+	return s.ColorFunc()(fmt.Sprintf("%-9s", s))
 }
 
 func (s Status) ColorFunc() func(string, ...interface{}) string {

@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
+	"github.com/ilikeorangutans/harbormaster/azkaban"
 	"github.com/ilikeorangutans/harbormaster/format"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"regexp"
-	"strings"
 	"text/tabwriter"
 	"time"
 )
@@ -59,22 +58,12 @@ func newGetProjectsCmd(context Context) *cobra.Command {
 	}
 }
 
-func predicateFromArgs(args []string, position int) func(string) bool {
+func predicateFromArgs(args []string, position int) func(azkaban.Flow) bool {
+	input := ""
 	if len(args) > position {
-		regexString := args[position]
-		if strings.HasPrefix(regexString, "/") && strings.HasSuffix(regexString, "/") {
-			regex, err := regexp.Compile(regexString[1 : len(args[position])-1])
-			if err != nil {
-				log.Fatal(err)
-			}
-			return func(s string) bool { return regex.MatchString(s) }
-		} else {
-			return func(s string) bool { return strings.HasPrefix(s, args[position]) }
-		}
-	} else {
-		return func(string) bool { return true }
+		input = args[position]
 	}
-
+	return azkaban.MatchesFlowName(input)
 }
 
 func newGetFlowsCmd(context Context) *cobra.Command {
@@ -86,17 +75,14 @@ func newGetFlowsCmd(context Context) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			client := context.Client()
 
+			context.Context().Flows().ListFlows(azkaban.Project{Name: context.Project()}, azkaban.MatchesAll(predicateFromArgs(args, 0)))
 			flows, err := client.ListFlows(context.Project())
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			predicate := predicateFromArgs(args, 0)
-
 			for _, f := range flows {
-				if predicate(f.FlowID) {
-					fmt.Printf("%s\n", f.FlowID)
-				}
+				fmt.Printf("%s\n", f.FlowID)
 			}
 		},
 	}
@@ -110,7 +96,7 @@ func newGetExecutionsCmd(context Context) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			client := context.Client()
-			executions, err := client.FlowExecutions(context.Project(), args[0])
+			executions, err := client.FlowExecutions(context.Project(), args[0], azkaban.TenMostRecent)
 			if err != nil {
 				panic(err)
 			}

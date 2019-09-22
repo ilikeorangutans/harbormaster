@@ -23,24 +23,20 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+			spinnerStatus := newSpinnerStatus()
 			s.Start()
-			s.Suffix = " fetching flows..."
+			s.Suffix = spinnerStatus.String()
 
-			flowNamePredicate := predicateFromArgs(args, 1)
 			project, err := context.Context().Projects().ByName(args[0])
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			allFlows, err := context.Context().Flows().ListFlows(project)
+			flowNamePredicate := predicateFromArgs(args, 1)
+
+			flows, err := context.Context().Flows().ListFlows(project, azkaban.MatchesAll(flowNamePredicate))
 			if err != nil {
 				log.Fatal(err)
-			}
-			var flows []azkaban.Flow
-			for _, flow := range allFlows {
-				if flowNamePredicate(flow.FlowID) {
-					flows = append(flows, flow)
-				}
 			}
 
 			w := new(tabwriter.Writer)
@@ -54,9 +50,21 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 			rowFormat := strings.Join([]string{"%s", "%-20s", "%s\n"}, "\t")
 			fmt.Fprintf(w, headerFormat, columns...)
 
+			numberOfExecutions, _ := cmd.Flags().GetUint("count")
+			numberOfDetails, _ := cmd.Flags().GetUint("details")
+			ignoreHealthy, _ := cmd.Flags().GetBool("ignore-healthy")
+			if numberOfDetails > numberOfExecutions {
+				numberOfDetails = numberOfExecutions
+			}
+			spinnerStatus.SetTotal(len(flows))
 			for i, f := range flows {
-				s.Suffix = fmt.Sprintf(" fetching execution %d/%d", i, len(flows))
-				executions, err := context.Context().Executions().ListExecutions(project, f, azkaban.TenMostRecent)
+				spinnerStatus.SetProgress(i)
+				s.Suffix = spinnerStatus.String()
+				executions, err := context.Context().Executions().ListExecutions(project, f, azkaban.NMostRecent(int(numberOfExecutions)))
+				if executions.Health().IsHealthy() && ignoreHealthy {
+					spinnerStatus.AddIgnored()
+					continue
+				}
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -68,8 +76,8 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 					executions.Health().Colored(),
 					executions.Histogram().Histogram,
 				)
-				if executions.Histogram().Failures > 0 {
-					for _, line := range executions.HistogramDetails(3) {
+				if executions.Health() != azkaban.Healthy {
+					for _, line := range executions.HistogramDetails(int(numberOfDetails)) {
 						fmt.Fprintf(w, rowFormat, "", color.WhiteString(""), line)
 					}
 				}
@@ -79,5 +87,44 @@ func newCheckProjectCmd(context Context) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().UintP("count", "c", 5, "how many executions to check")
+	cmd.Flags().UintP("details", "d", 3, "for how many executions to show details")
+	cmd.Flags().BoolP("ignore-healthy", "i", false, "show only non-healthy flows")
+
 	return cmd
+}
+
+type spinnerStatus struct {
+	total    int
+	ignored  int
+	progress int
+}
+
+func newSpinnerStatus() *spinnerStatus {
+	return &spinnerStatus{
+		total:    0,
+		ignored:  0,
+		progress: 0,
+	}
+}
+func (s *spinnerStatus) SetTotal(n int) {
+	s.total = n
+}
+
+func (s *spinnerStatus) SetProgress(n int) {
+	s.progress = n
+}
+func (s *spinnerStatus) AddIgnored() {
+	s.ignored += 1
+}
+
+func (s *spinnerStatus) String() string {
+	if s.total == 0 {
+		return " fetching flows..."
+	}
+	if s.ignored > 0 {
+		return fmt.Sprintf(" fetching execution %d/%d (%d ignored)", s.progress, s.total, s.ignored)
+	} else {
+		return fmt.Sprintf(" fetching execution %d/%d", s.progress, s.total)
+	}
 }

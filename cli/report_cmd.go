@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"strings"
 	"text/tabwriter"
 	"time"
 )
@@ -19,26 +18,15 @@ func NewReportCmd(context Context) *cobra.Command {
 		Short:   "average execution time ",
 		Run: func(cmd *cobra.Command, args []string) {
 			project := azkaban.Project{Name: context.Project()}
-			flows, err := context.Context().Flows().ListFlows(project)
+			flows, err := context.Context().Flows().ListFlows(project, predicateFromArgs(args, 0))
 			if err != nil {
 				log.Fatal(err)
-			}
-
-			var filteredFlows []azkaban.Flow
-			if len(args) > 0 {
-				for _, f := range flows {
-					if strings.HasPrefix(f.FlowID, args[0]) {
-						filteredFlows = append(filteredFlows, f)
-					}
-				}
-			} else {
-				filteredFlows = flows
 			}
 
 			var data []execReportData
 			execRepo := context.Context().Executions()
 
-			for _, f := range filteredFlows {
+			for _, f := range flows {
 				executions, err := execRepo.ListExecutions(project, f, azkaban.TenMostRecent)
 				if err != nil {
 					log.Fatal(err)
@@ -66,11 +54,11 @@ func NewReportCmd(context Context) *cobra.Command {
 			}
 
 			formatter := consoleFormatter
-			format, err := cmd.Flags().GetString("format")
+			formatStr, err := cmd.Flags().GetString("formatStr")
 			if err != nil {
 				log.Fatal(err)
 			}
-			if format == "tsv" {
+			if formatStr == "tsv" {
 				formatter = tsvFormatter
 			}
 

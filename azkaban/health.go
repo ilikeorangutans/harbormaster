@@ -18,6 +18,15 @@ func (h Health) Colored() string {
 	}
 }
 
+func (h Health) IsHealthy() bool {
+	switch h {
+	case Healthy:
+		return true
+	default:
+		return false
+	}
+}
+
 const (
 	Healthy    Health = "healthy"
 	Concerning        = "concerning"

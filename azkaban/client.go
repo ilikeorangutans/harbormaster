@@ -86,13 +86,13 @@ func (c *Client) FetchExecutionJobLog(executionID int64, jobID string, offset in
 	return log, err
 }
 
-func (c *Client) FlowExecutions(project, flow string) (Executions, error) {
+func (c *Client) FlowExecutions(project, flow string, paginator Paginator) (Executions, error) {
 	params := make(map[string]string)
 	params["ajax"] = "fetchFlowExecutions"
 	params["project"] = project
 	params["flow"] = flow
-	params["start"] = "0"
-	params["length"] = "20"
+	params["start"] = strconv.Itoa(paginator.Offset)
+	params["length"] = strconv.Itoa(paginator.Length)
 
 	executions := ExecutionsList{}
 	if err := c.requestAndDecode("GET", "manager", params, &executions); err != nil {
@@ -257,15 +257,6 @@ func findExecutions(n *htmlx.Node) ([]FlowExecution, error) {
 	return executions, nil
 }
 
-func getAttribute(n *htmlx.Node, name string) string {
-	for _, a := range n.Attr {
-		if a.Key == name {
-			return a.Val
-		}
-	}
-	return ""
-}
-
 func findElementsOfType(n *htmlx.Node, t string) []*htmlx.Node {
 	var result []*htmlx.Node
 	if n.Type == htmlx.ElementNode && n.Data == t {
@@ -281,7 +272,7 @@ func findElementsOfType(n *htmlx.Node, t string) []*htmlx.Node {
 
 func findElementWithID(n *htmlx.Node, id string) *htmlx.Node {
 	if hasAttribute(n, "id", id) {
-		return n;
+		return n
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		if result := findElementWithID(c, id); result != nil {
